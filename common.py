@@ -253,13 +253,13 @@ def run_reinforce(env, env_name):
                                                                              optimizer_type=NetworkOptimizer.ADAM,
                                                                              optimizer_args=network_optimizer_args)
 
-        results = results.append({
-            'hidden_layer_size': hidden_layer_size,
-            'learning_rate': learning_rate,
-            'num_time_steps': num_timesteps,
-            'avg_score': round(avg_score, 5),
-            'avg_loss': round(avg_loss, 5)
-        }, ignore_index=True)
+            results = results.append({
+                'hidden_layer_size': hidden_layer_size,
+                'learning_rate': learning_rate,
+                'num_time_steps': num_timesteps,
+                'avg_score': round(avg_score, 5),
+                'avg_loss': round(avg_loss, 5)
+            }, ignore_index=True)
 
     results.to_csv(csv_file, index=False)
 
