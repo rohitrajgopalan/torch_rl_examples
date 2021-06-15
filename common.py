@@ -317,6 +317,7 @@ def run_actor_critic_discrete_methods(env, env_name):
 
 
 def run_all_discrete_methods(env, env_name):
+    print('Running', env_name)
     run_dqn_methods(env, env_name)
     run_actor_critic_discrete_methods(env, env_name)
 
@@ -495,6 +496,7 @@ def run_sac(env, env_name):
 
 
 def run_actor_critic_continuous_methods(env, env_name):
+    print('Running', env_name)
     run_ddpg(env, env_name)
     run_td3(env, env_name)
     run_sac(env, env_name)
