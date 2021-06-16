@@ -348,7 +348,7 @@ def run_ppo(env, env_name):
                             }
                             print('Running instance of PPO: Actions {0}normalized, batch size of {1}, '
                                   'hidden layer size of {2}, actor learning rate of {3}, critic learning rate of {4}'
-                                  'and {5} update iterations'
+                                  ' and {5} update iterations'
                                   .format('' if normalize_actions else 'un', batch_size, hidden_layer_size,
                                           actor_learning_rate, critic_learning_rate, num_updates_per_iteration))
                             avg_score, avg_policy_loss, avg_critic_loss = torch_rl.ppo.main.run(
