@@ -14,6 +14,7 @@ import torch_rl.actor_critic.main
 import torch_rl.ddpg.main
 import torch_rl.td3.main
 import torch_rl.sac.main
+import torch_rl.ppo.main
 from torch_rl.utils.types import NetworkOptimizer
 
 
@@ -322,19 +323,70 @@ def run_all_discrete_methods(env, env_name):
     run_actor_critic_discrete_methods(env, env_name)
 
 
+def run_ppo(env, env_name):
+    n_games = 75
+
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_ppo.csv'.format(env_name))
+
+    results = pd.DataFrame(columns=['normalize_actions', 'batch_size', 'hidden_layer_size', 'actor_learning_rate',
+                                    'critic_learning_rate', 'num_updates_per_iteration',
+                                    'avg_score', 'avg_policy_loss', 'avg_value_loss'])
+
+    for normalize_actions in [False, True]:
+        for batch_size in [2048, 4800]:
+            for hidden_layer_size in [64, 128, 256, 512]:
+                for actor_learning_rate in [0.001, 3e-4]:
+                    for critic_learning_rate in [0.001, 3e-4]:
+                        for num_updates_per_iteration in [5, 10]:
+                            if normalize_actions:
+                                env = NormalizedActions(env)
+                            actor_optimizer_args = {
+                                'learning_rate': actor_learning_rate
+                            }
+                            critic_optimizer_args = {
+                                'learning_rate': critic_learning_rate
+                            }
+                            print('Running instance of PPO: Actions {0}normalized, batch size of {1}, '
+                                  'hidden layer size of {2}, actor learning rate of {3}, critic learning rate of {4}'
+                                  'and {5} update iterations'
+                                  .format('' if normalize_actions else 'un', batch_size, hidden_layer_size,
+                                          actor_learning_rate, critic_learning_rate, num_updates_per_iteration))
+                            avg_score, avg_policy_loss, avg_critic_loss = torch_rl.ppo.main.run(
+                                env=env, n_games=n_games, fc_dims=hidden_layer_size,
+                                actor_optimizer_type=NetworkOptimizer.ADAM, critic_optimizer_type=NetworkOptimizer.ADAM,
+                                actor_optimizer_args=actor_optimizer_args, critic_optimizer_args=critic_optimizer_args,
+                                gamma=0.99, updates_per_iteration=num_updates_per_iteration, batch_size=batch_size)
+
+                            results = results.append({
+                                'normalize_actions': 'Yes' if normalize_actions else 'No',
+                                'batch_size': batch_size,
+                                'hidden_layer_size': hidden_layer_size,
+                                'actor_learning_rate': actor_learning_rate,
+                                'critic_learning_rate': critic_learning_rate,
+                                'num_updates_per_iteration': num_updates_per_iteration,
+                                'avg_score': round(avg_score, 5),
+                                'avg_policy_loss': round(avg_policy_loss, 5),
+                                'avg_value_loss': round(avg_critic_loss, 5)
+                            }, ignore_index=True)
+
+    results.to_csv(csv_file, index=False)
+
+
 def run_ddpg(env, env_name):
     n_games = 75
 
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_ddpg.csv'.format(env_name))
 
-    results = pd.DataFrame(columns=['normalize_actions','batch_size', 'hidden_layer_size', 'replay', 'actor_learning_rate',
-                                    'critic_learning_rate', 'tau',
-                                    'num_time_steps', 'avg_score', 'avg_policy_loss', 'avg_value_loss'])
+    results = pd.DataFrame(
+        columns=['normalize_actions', 'batch_size', 'hidden_layer_size', 'replay', 'actor_learning_rate',
+                 'critic_learning_rate', 'tau',
+                 'num_time_steps', 'avg_score', 'avg_policy_loss', 'avg_value_loss'])
 
     for normalize_actions in [False, True]:
         for batch_size in [64, 128]:
-            for hidden_layer_size in [64, 128, 256, 300, 400, 512, derive_hidden_layer_size(env.observation_space.shape, batch_size)]:
+            for hidden_layer_size in [64, 128, 256, 300, 400, 512,
+                                      derive_hidden_layer_size(env.observation_space.shape, batch_size)]:
                 for randomized in [False, True]:
                     for actor_learning_rate in [0.001, 0.0001]:
                         for critic_learning_rate in [0.001, 0.0001]:
@@ -350,13 +402,16 @@ def run_ddpg(env, env_name):
                                 print('Running instance of DDPG: Actions {0}normalized, {1} replay, batch size of {2}, '
                                       'hidden layer size of {3}, '
                                       'actor learning rate of {4}, critic learning rate of {5} and tau {6}'
-                                      .format('' if normalize_actions else 'un', 'Randomized' if randomized else 'Sequenced', batch_size, hidden_layer_size,
+                                      .format('' if normalize_actions else 'un',
+                                              'Randomized' if randomized else 'Sequenced', batch_size,
+                                              hidden_layer_size,
                                               actor_learning_rate, critic_learning_rate, tau))
                                 num_time_steps, avg_score, avg_policy_loss, avg_critic_loss = torch_rl.ddpg.main.run(
                                     env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
                                     batch_size=batch_size, randomized=randomized,
                                     actor_optimizer_type=NetworkOptimizer.ADAM,
-                                    critic_optimizer_type=NetworkOptimizer.ADAM, actor_optimizer_args=actor_optimizer_args,
+                                    critic_optimizer_type=NetworkOptimizer.ADAM,
+                                    actor_optimizer_args=actor_optimizer_args,
                                     critic_optimizer_args=critic_optimizer_args
                                 )
 
@@ -383,10 +438,11 @@ def run_td3(env, env_name):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_td3.csv'.format(env_name))
 
-    results = pd.DataFrame(columns=['normalize_actions','batch_size', 'hidden_layer_size', 'replay', 'actor_learning_rate',
-                                    'critic_learning_rate', 'tau',
-                                    'num_time_steps', 'avg_score', 'avg_policy_loss', 'avg_value1_loss',
-                                    'avg_value2_loss'])
+    results = pd.DataFrame(
+        columns=['normalize_actions', 'batch_size', 'hidden_layer_size', 'replay', 'actor_learning_rate',
+                 'critic_learning_rate', 'tau',
+                 'num_time_steps', 'avg_score', 'avg_policy_loss', 'avg_value1_loss',
+                 'avg_value2_loss'])
 
     actor_optimizer_args = {
         'learning_rate': 1e-3
@@ -397,7 +453,8 @@ def run_td3(env, env_name):
 
     for normalize_actions in [False, True]:
         for batch_size in [64, 100, 128]:
-            for hidden_layer_size in [64, 128, 256, 300, 400, 512, derive_hidden_layer_size(env.observation_space.shape, batch_size)]:
+            for hidden_layer_size in [64, 128, 256, 300, 400, 512,
+                                      derive_hidden_layer_size(env.observation_space.shape, batch_size)]:
                 for randomized in [False, True]:
                     for tau in [0.005, 0.01]:
                         if normalize_actions:
@@ -405,7 +462,8 @@ def run_td3(env, env_name):
                         print('Running instance of TD3: Actions {0}normalized, {1} replay, batch size of {2}, '
                               'hidden layer size of {3}, '
                               'and tau {4}'
-                              .format('' if normalize_actions else 'un', 'Randomized' if randomized else 'Sequenced', batch_size, hidden_layer_size,
+                              .format('' if normalize_actions else 'un', 'Randomized' if randomized else 'Sequenced',
+                                      batch_size, hidden_layer_size,
                                       tau))
                         num_time_steps, avg_score, avg_policy_loss, avg_value1_loss, avg_value2_loss = torch_rl.td3.main.run(
                             env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
@@ -437,14 +495,15 @@ def run_sac(env, env_name):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_sac.csv'.format(env_name))
 
-    results = pd.DataFrame(columns=['normalize_actions','batch_size', 'hidden_layer_size', 'replay',
+    results = pd.DataFrame(columns=['normalize_actions', 'batch_size', 'hidden_layer_size', 'replay',
                                     'actor_learning_rate',
                                     'critic_learning_rate', 'value_learning_rate', 'tau',
                                     'num_time_steps', 'avg_score', 'avg_policy_loss', 'avg_value_loss'])
 
     for normalize_actions in [False, True]:
         for batch_size in [64, 100, 128]:
-            for hidden_layer_size in [64, 128, 256, 512, derive_hidden_layer_size(env.observation_space.shape, batch_size)]:
+            for hidden_layer_size in [64, 128, 256, 512,
+                                      derive_hidden_layer_size(env.observation_space.shape, batch_size)]:
                 for randomized in [False, True]:
                     for actor_learning_rate in [0.001, 0.0003]:
                         for critic_learning_rate in [0.001, 0.0003]:
@@ -466,15 +525,19 @@ def run_sac(env, env_name):
                                           'hidden layer size of {3}, '
                                           'actor learning rate of {4}, critic learning rate of {5},'
                                           ' value learning rate of {6} and tau {7}'
-                                          .format('' if normalize_actions else 'un', 'Randomized' if randomized else 'Sequenced', batch_size, hidden_layer_size,
+                                          .format('' if normalize_actions else 'un',
+                                                  'Randomized' if randomized else 'Sequenced', batch_size,
+                                                  hidden_layer_size,
                                                   actor_learning_rate, critic_learning_rate, value_learning_rate, tau))
                                     num_time_steps, avg_score, avg_policy_loss, avg_critic_loss = torch_rl.sac.main.run(
                                         env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
                                         batch_size=batch_size, randomized=randomized,
                                         actor_optimizer_type=NetworkOptimizer.ADAM,
-                                        critic_optimizer_type=NetworkOptimizer.ADAM, actor_optimizer_args=actor_optimizer_args,
+                                        critic_optimizer_type=NetworkOptimizer.ADAM,
+                                        actor_optimizer_args=actor_optimizer_args,
                                         critic_optimizer_args=critic_optimizer_args,
-                                        value_optimizer_type=NetworkOptimizer.ADAM, value_optimizer_args=value_optimizer_args
+                                        value_optimizer_type=NetworkOptimizer.ADAM,
+                                        value_optimizer_args=value_optimizer_args
                                     )
 
                                     results = results.append({
@@ -497,6 +560,7 @@ def run_sac(env, env_name):
 
 def run_actor_critic_continuous_methods(env, env_name):
     print('Running', env_name)
+    run_ppo(env, env_name)
     run_ddpg(env, env_name)
     run_td3(env, env_name)
     run_sac(env, env_name)
