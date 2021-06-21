@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import gym
 
+from gym.spaces import Box, Discrete
+
 import torch_rl.dqn.main
 import torch_rl.ddqn.main
 import torch_rl.dueling_dqn.main
@@ -28,7 +30,12 @@ def is_observation_space_not_well_defined(env):
 
 class NormalizedStates(gym.ObservationWrapper):
     def observation(self, observation):
-        return (observation - self.observation_space.low) / (self.observation_space.high - self.observation_space.low)
+        if type(self.observation_space) == Box:
+            return (observation - self.observation_space.low) / (self.observation_space.high - self.observation_space.low)
+        elif type(self.observation_space) == Discrete:
+            return observation/self.observation_space.n
+        else:
+            return observation
 
 
 class NormalizedActions(gym.ActionWrapper):
