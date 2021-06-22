@@ -20,8 +20,11 @@ import torch_rl.ppo.main
 from torch_rl.utils.types import NetworkOptimizer
 
 
-def derive_hidden_layer_size(state_dim, batch_size):
-    return state_dim[0] * batch_size
+def derive_hidden_layer_size(env, batch_size):
+    if getattr(env.observation_space, 'shape'):
+        return env.observation_space.shape[0] * batch_size
+    else:
+        return batch_size
 
 
 def is_observation_space_not_well_defined(env):
