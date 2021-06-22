@@ -21,7 +21,7 @@ from torch_rl.utils.types import NetworkOptimizer
 
 
 def derive_hidden_layer_size(env, batch_size):
-    if getattr(env.observation_space, 'shape'):
+    if type(env.observation_space) == Box:
         return env.observation_space.shape[0] * batch_size
     else:
         return batch_size
