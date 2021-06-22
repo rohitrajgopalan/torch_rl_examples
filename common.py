@@ -92,7 +92,7 @@ def run_dqn(env, env_name, penalty, env_goal=None):
                 for randomized in [False, True]:
                     for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
                         for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env.observation_space.shape, batch_size),
+                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
                                                   64, 128, 256, 512]
                             hidden_layer_sizes = list(set(hidden_layer_sizes))
                             for hidden_layer_size in hidden_layer_sizes:
@@ -165,7 +165,7 @@ def run_ddqn(env, env_name, penalty, env_goal=None):
                 for randomized in [False, True]:
                     for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
                         for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env.observation_space.shape, batch_size),
+                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
                                                   64, 128, 256, 512]
                             hidden_layer_sizes = list(set(hidden_layer_sizes))
                             for hidden_layer_size in hidden_layer_sizes:
@@ -240,7 +240,7 @@ def run_dueling_dqn(env, env_name, penalty, env_goal=None):
                 for randomized in [False, True]:
                     for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
                         for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env.observation_space.shape, batch_size),
+                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
                                                   64, 128, 256, 512]
                             hidden_layer_sizes = list(set(hidden_layer_sizes))
                             for hidden_layer_size in hidden_layer_sizes:
@@ -314,7 +314,7 @@ def run_dueling_ddqn(env, env_name, penalty, env_goal=None):
                 for randomized in [False, True]:
                     for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
                         for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env.observation_space.shape, batch_size),
+                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
                                                   64, 128, 256, 512]
                             hidden_layer_sizes = list(set(hidden_layer_sizes))
                             for hidden_layer_size in hidden_layer_sizes:
@@ -604,7 +604,7 @@ def run_ddpg(env, env_name):
         for normalize_actions in [False, True]:
             for batch_size in [64, 128]:
                 hidden_layer_sizes = [64, 128, 256, 300, 400, 512,
-                                      derive_hidden_layer_size(env.observation_space.shape, batch_size)]
+                                      derive_hidden_layer_size(env, batch_size)]
                 hidden_layer_sizes = list(set(hidden_layer_sizes))
                 for hidden_layer_size in hidden_layer_sizes:
                     for randomized in [False, True]:
@@ -696,7 +696,7 @@ def run_td3(env, env_name):
         for normalize_actions in [False, True]:
             for batch_size in [64, 100, 128]:
                 hidden_layer_sizes = [64, 128, 256, 300, 400, 512,
-                                      derive_hidden_layer_size(env.observation_space.shape, batch_size)]
+                                      derive_hidden_layer_size(env, batch_size)]
                 hidden_layer_sizes = list(set(hidden_layer_sizes))
                 for hidden_layer_size in hidden_layer_sizes:
                     for randomized in [False, True]:
@@ -768,7 +768,7 @@ def run_sac(env, env_name):
         for normalize_actions in [False, True]:
             for batch_size in [64, 100, 128]:
                 hidden_layer_sizes = [64, 128, 256, 300, 400, 512,
-                                      derive_hidden_layer_size(env.observation_space.shape, batch_size)]
+                                      derive_hidden_layer_size(env, batch_size)]
                 hidden_layer_sizes = list(set(hidden_layer_sizes))
                 for hidden_layer_size in hidden_layer_sizes:
                     for randomized in [False, True]:
