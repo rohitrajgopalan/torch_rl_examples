@@ -25,7 +25,10 @@ def derive_hidden_layer_size(state_dim, batch_size):
 
 
 def is_observation_space_not_well_defined(env):
-    return (env.observation_space.low == -np.inf).any() or (env.observation_space.high == np.inf).any()
+    if type(env.observation_space) == Box:
+        return (env.observation_space.low == -np.inf).any() or (env.observation_space.high == np.inf).any()
+    else:
+        return False
 
 
 class NormalizedStates(gym.ObservationWrapper):
@@ -33,7 +36,7 @@ class NormalizedStates(gym.ObservationWrapper):
         if type(self.observation_space) == Box:
             return (observation - self.observation_space.low) / (self.observation_space.high - self.observation_space.low)
         elif type(self.observation_space) == Discrete:
-            return observation/self.observation_space.n
+            return (observation + 1)/self.observation_space.n
         else:
             return observation
 
@@ -93,6 +96,8 @@ def run_dqn(env, env_name, penalty, env_goal=None):
                                 for goal in list({None, env_goal}):
                                     if normalize_state:
                                         env = NormalizedStates(env)
+                                        if goal:
+                                            goal = env.observation(goal)
                                     network_optimizer_args = {
                                         'learning_rate': learning_rate
                                     }
@@ -164,6 +169,8 @@ def run_ddqn(env, env_name, penalty, env_goal=None):
                                 for goal in list({None, env_goal}):
                                     if normalize_state:
                                         env = NormalizedStates(env)
+                                        if goal:
+                                            goal = env.observation(goal)
                                     network_optimizer_args = {
                                         'learning_rate': learning_rate
                                     }
@@ -237,6 +244,8 @@ def run_dueling_dqn(env, env_name, penalty, env_goal=None):
                                 for goal in list({None, env_goal}):
                                     if normalize_state:
                                         env = NormalizedStates(env)
+                                        if goal:
+                                            goal = env.observation(goal)
                                     network_optimizer_args = {
                                         'learning_rate': learning_rate
                                     }
@@ -309,6 +318,8 @@ def run_dueling_ddqn(env, env_name, penalty, env_goal=None):
                                 for goal in list({None, env_goal}):
                                     if normalize_state:
                                         env = NormalizedStates(env)
+                                        if goal:
+                                            goal = env.observation(goal)
                                     network_optimizer_args = {
                                         'learning_rate': learning_rate
                                     }
@@ -388,6 +399,8 @@ def run_reinforce(env, env_name, penalty, env_goal=None):
                     for goal in list({None, env_goal}):
                         if normalize_state:
                             env = NormalizedStates(env)
+                            if goal:
+                                goal = env.observation(goal)
                         network_optimizer_args = {
                             'learning_rate': learning_rate
                         }
@@ -449,6 +462,8 @@ def run_actor_critic(env, env_name, penalty, env_goal=None):
                     for goal in list({None, env_goal}):
                         if normalize_state:
                             env = NormalizedStates(env)
+                            if goal:
+                                goal = env.observation(goal)
                         network_optimizer_args = {
                             'learning_rate': learning_rate
                         }
