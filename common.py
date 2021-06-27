@@ -8,9 +8,7 @@ import gym
 from gym.spaces import Box, Discrete
 
 import torch_rl.dqn.main
-import torch_rl.ddqn.main
 import torch_rl.dueling_dqn.main
-import torch_rl.dueling_ddqn.main
 import torch_rl.reinforce.main
 import torch_rl.actor_critic.main
 import torch_rl.ddpg.main
@@ -244,7 +242,7 @@ def run_reinforce(env, env_name, penalty, env_goal=None):
     is_observation_space_well_defined = not is_observation_space_not_well_defined(env)
 
     if is_observation_space_well_defined:
-        result_cols.insert(0, 'normalize_states')
+        result_cols.insert(0, 'normalize_state')
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -295,7 +293,7 @@ def run_actor_critic(env, env_name, penalty, env_goal=None):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_actor_critic.csv'.format(env_name))
 
-    result_cols = ['hidden_layer_sizes', 'learning_rate', 'goal_focused',
+    result_cols = ['hidden_layer_size', 'learning_rate', 'goal_focused',
                    'num_time_steps_train', 'avg_score_train',
                    'action_blocker_precision_train',
                    'action_blocker_recall_train', 'num_actions_blocked_train',
@@ -307,7 +305,7 @@ def run_actor_critic(env, env_name, penalty, env_goal=None):
     is_observation_space_well_defined = not is_observation_space_not_well_defined(env)
 
     if is_observation_space_well_defined:
-        result_cols.insert(0, 'normalize_states')
+        result_cols.insert(0, 'normalize_state')
 
     results = pd.DataFrame(columns=result_cols)
 
