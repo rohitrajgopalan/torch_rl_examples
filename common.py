@@ -37,9 +37,10 @@ def is_observation_space_not_well_defined(env):
 class NormalizedStates(gym.ObservationWrapper):
     def observation(self, observation):
         if type(self.observation_space) == Box:
-            return (observation - self.observation_space.low) / (self.observation_space.high - self.observation_space.low)
+            return (observation - self.observation_space.low) / (
+                        self.observation_space.high - self.observation_space.low)
         elif type(self.observation_space) == Discrete:
-            return (observation + 1)/self.observation_space.n
+            return (observation + 1) / self.observation_space.n
         else:
             return observation
 
@@ -70,6 +71,7 @@ def run_dqn(env, env_name, penalty, env_goal=None):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_dqn.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'replay', 'optimizer', 'learning_rate', 'goal_focused',
+                   'is_double',
                    'num_time_steps_train', 'avg_score_train', 'action_blocker_precision_train',
                    'action_blocker_recall_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test',
@@ -86,128 +88,56 @@ def run_dqn(env, env_name, penalty, env_goal=None):
 
     normalize_state_flags = [False, True] if is_observation_space_well_defined else [False]
     enable_action_blocker_flags = [False, True] if penalty > 0 else [False]
-    for enable_action_blocker in enable_action_blocker_flags:
-        for normalize_state in normalize_state_flags:
-            for batch_size in [32, 64, 128]:
-                for randomized in [False, True]:
-                    for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                        for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
-                                                  64, 128, 256, 512]
-                            hidden_layer_sizes = list(set(hidden_layer_sizes))
-                            for hidden_layer_size in hidden_layer_sizes:
-                                for goal in list({None, env_goal}):
-                                    if normalize_state:
-                                        env = NormalizedStates(env)
-                                        if goal:
-                                            goal = env.observation(goal)
-                                    network_optimizer_args = {
-                                        'learning_rate': learning_rate
-                                    }
-                                    result = torch_rl.dqn.main.run(
-                                        env=env, n_games=n_games, gamma=0.99,
-                                        epsilon=1.0, mem_size=1000,
-                                        batch_size=batch_size,
-                                        fc_dims=hidden_layer_size,
-                                        optimizer_type=optimizer_type,
-                                        eps_min=0.01,
-                                        eps_dec=5e-7,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        randomized=randomized,
-                                        enable_action_blocking=enable_action_blocker,
-                                        min_penalty=penalty,
-                                        goal=goal)
+    for is_double in [False, True]:
+        for enable_action_blocker in enable_action_blocker_flags:
+            for normalize_state in normalize_state_flags:
+                for batch_size in [32, 64, 128]:
+                    for randomized in [False, True]:
+                        for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
+                            for learning_rate in [0.001, 0.0001]:
+                                hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
+                                                      64, 128, 256, 512]
+                                hidden_layer_sizes = list(set(hidden_layer_sizes))
+                                for hidden_layer_size in hidden_layer_sizes:
+                                    for goal in list({None, env_goal}):
+                                        if normalize_state:
+                                            env = NormalizedStates(env)
+                                            if goal:
+                                                goal = env.observation(goal)
+                                        network_optimizer_args = {
+                                            'learning_rate': learning_rate
+                                        }
+                                        result = torch_rl.dqn.main.run(
+                                            env=env, n_games=n_games, gamma=0.99,
+                                            epsilon=1.0, mem_size=1000,
+                                            batch_size=batch_size,
+                                            fc_dims=hidden_layer_size,
+                                            optimizer_type=optimizer_type,
+                                            eps_min=0.01,
+                                            eps_dec=5e-7,
+                                            replace=1000,
+                                            optimizer_args=network_optimizer_args,
+                                            randomized=randomized,
+                                            enable_action_blocking=enable_action_blocker,
+                                            min_penalty=penalty,
+                                            goal=goal,
+                                            is_double=is_double)
 
-                                    new_row = {
-                                        'batch_size': batch_size,
-                                        'hidden_layer_size': hidden_layer_size,
-                                        'replay': 'Randomized' if randomized else 'Sequenced',
-                                        'optimizer': optimizer_type.name.lower(),
-                                        'learning_rate': learning_rate,
-                                        'goal_focused': 'Yes' if goal else 'No'
-                                    }
-                                    for key in result:
-                                        new_row.update({key: result[key]})
+                                        new_row = {
+                                            'batch_size': batch_size,
+                                            'hidden_layer_size': hidden_layer_size,
+                                            'replay': 'Randomized' if randomized else 'Sequenced',
+                                            'optimizer': optimizer_type.name.lower(),
+                                            'learning_rate': learning_rate,
+                                            'goal_focused': 'Yes' if goal else 'No',
+                                            'is_double': 'Yes' if is_double else 'No'
+                                        }
+                                        for key in result:
+                                            new_row.update({key: result[key]})
 
-                                    if is_observation_space_well_defined:
-                                        new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
-                                    results = results.append(new_row, ignore_index=True)
-
-    results.to_csv(csv_file, index=False)
-
-
-def run_ddqn(env, env_name, penalty, env_goal=None):
-    n_games = (500, 50)
-
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_ddqn.csv'.format(env_name))
-    result_cols = ['batch_size', 'hidden_layer_size', 'replay', 'optimizer', 'learning_rate', 'goal_focused',
-                   'num_time_steps_train', 'avg_score_train', 'action_blocker_precision_train',
-                   'action_blocker_recall_train', 'num_actions_blocked_train',
-                   'num_time_steps_test', 'avg_score_test',
-                   'action_blocker_precision_test', 'action_blocker_recall_test',
-                   'num_actions_blocked_test',
-                   'avg_loss']
-
-    is_observation_space_well_defined = not is_observation_space_not_well_defined(env)
-
-    if is_observation_space_well_defined:
-        result_cols.insert(0, 'normalize_state')
-
-    results = pd.DataFrame(columns=result_cols)
-
-    normalize_state_flags = [False, True] if is_observation_space_well_defined else [False]
-
-    enable_action_blocker_flags = [False, True] if penalty > 0 else [False]
-    for enable_action_blocker in enable_action_blocker_flags:
-        for normalize_state in normalize_state_flags:
-            for batch_size in [32, 64, 128]:
-                for randomized in [False, True]:
-                    for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                        for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
-                                                  64, 128, 256, 512]
-                            hidden_layer_sizes = list(set(hidden_layer_sizes))
-                            for hidden_layer_size in hidden_layer_sizes:
-                                for goal in list({None, env_goal}):
-                                    if normalize_state:
-                                        env = NormalizedStates(env)
-                                        if goal:
-                                            goal = env.observation(goal)
-                                    network_optimizer_args = {
-                                        'learning_rate': learning_rate
-                                    }
-                                    result = torch_rl.dqn.main.run(
-                                        env=env, n_games=n_games,
-                                        gamma=0.99,
-                                        epsilon=1.0,
-                                        mem_size=1000,
-                                        batch_size=batch_size,
-                                        fc_dims=hidden_layer_size,
-                                        optimizer_type=optimizer_type,
-                                        eps_min=0.01,
-                                        eps_dec=5e-7,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        randomized=randomized,
-                                        enable_action_blocking=enable_action_blocker,
-                                        min_penalty=penalty,
-                                        goal=goal)
-
-                                    new_row = {
-                                        'batch_size': batch_size,
-                                        'hidden_layer_size': hidden_layer_size,
-                                        'replay': 'Randomized' if randomized else 'Sequenced',
-                                        'optimizer': optimizer_type.name.lower(),
-                                        'learning_rate': learning_rate,
-                                        'goal_focused': 'Yes' if goal else 'No'
-                                    }
-                                    for key in result:
-                                        new_row.update({key: result[key]})
-
-                                    if is_observation_space_well_defined:
-                                        new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
-                                    results = results.append(new_row, ignore_index=True)
+                                        if is_observation_space_well_defined:
+                                            new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
+                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False)
 
@@ -218,6 +148,7 @@ def run_dueling_dqn(env, env_name, penalty, env_goal=None):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_dueling_dqn.csv'.format(env_name))
     result_cols = ['batch_size', 'hidden_layer_size', 'replay', 'optimizer', 'learning_rate', 'goal_focused',
+                   'is_double',
                    'num_time_steps_train', 'avg_score_train', 'action_blocker_precision_train',
                    'action_blocker_recall_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test',
@@ -234,128 +165,56 @@ def run_dueling_dqn(env, env_name, penalty, env_goal=None):
 
     normalize_state_flags = [False, True] if is_observation_space_well_defined else [False]
     enable_action_blocker_flags = [False, True] if penalty > 0 else [False]
-    for enable_action_blocker in enable_action_blocker_flags:
-        for normalize_state in normalize_state_flags:
-            for batch_size in [32, 64, 128]:
-                for randomized in [False, True]:
-                    for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                        for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
-                                                  64, 128, 256, 512]
-                            hidden_layer_sizes = list(set(hidden_layer_sizes))
-                            for hidden_layer_size in hidden_layer_sizes:
-                                for goal in list({None, env_goal}):
-                                    if normalize_state:
-                                        env = NormalizedStates(env)
-                                        if goal:
-                                            goal = env.observation(goal)
-                                    network_optimizer_args = {
-                                        'learning_rate': learning_rate
-                                    }
-                                    result = torch_rl.dueling_dqn.main.run(
-                                        env=env, n_games=n_games,
-                                        gamma=0.99,
-                                        epsilon=1.0, mem_size=1000,
-                                        batch_size=batch_size,
-                                        fc_dims=hidden_layer_size,
-                                        optimizer_type=optimizer_type,
-                                        eps_min=0.01,
-                                        eps_dec=5e-7,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        randomized=randomized,
-                                        enable_action_blocking=enable_action_blocker,
-                                        min_penalty=penalty,
-                                        goal=goal)
+    for is_double in [False, True]:
+        for enable_action_blocker in enable_action_blocker_flags:
+            for normalize_state in normalize_state_flags:
+                for batch_size in [32, 64, 128]:
+                    for randomized in [False, True]:
+                        for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
+                            for learning_rate in [0.001, 0.0001]:
+                                hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
+                                                      64, 128, 256, 512]
+                                hidden_layer_sizes = list(set(hidden_layer_sizes))
+                                for hidden_layer_size in hidden_layer_sizes:
+                                    for goal in list({None, env_goal}):
+                                        if normalize_state:
+                                            env = NormalizedStates(env)
+                                            if goal:
+                                                goal = env.observation(goal)
+                                        network_optimizer_args = {
+                                            'learning_rate': learning_rate
+                                        }
+                                        result = torch_rl.dueling_dqn.main.run(
+                                            env=env, n_games=n_games,
+                                            gamma=0.99,
+                                            epsilon=1.0, mem_size=1000,
+                                            batch_size=batch_size,
+                                            fc_dims=hidden_layer_size,
+                                            optimizer_type=optimizer_type,
+                                            eps_min=0.01,
+                                            eps_dec=5e-7,
+                                            replace=1000,
+                                            optimizer_args=network_optimizer_args,
+                                            randomized=randomized,
+                                            enable_action_blocking=enable_action_blocker,
+                                            min_penalty=penalty,
+                                            goal=goal,
+                                            is_double=is_double)
 
-                                    new_row = {
-                                        'batch_size': batch_size,
-                                        'hidden_layer_size': hidden_layer_size,
-                                        'replay': 'Randomized' if randomized else 'Sequenced',
-                                        'optimizer': optimizer_type.name.lower(),
-                                        'learning_rate': learning_rate,
-                                        'goal_focused': 'Yes' if goal else 'No'
-                                    }
-                                    for key in result:
-                                        new_row.update({key: result[key]})
-                                    if is_observation_space_well_defined:
-                                        new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
-                                    results = results.append(new_row, ignore_index=True)
-
-    results.to_csv(csv_file, index=False)
-
-
-def run_dueling_ddqn(env, env_name, penalty, env_goal=None):
-    n_games = (500, 50)
-
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_dueling_ddqn.csv'.format(env_name))
-
-    result_cols = ['batch_size', 'hidden_layer_size', 'replay', 'optimizer', 'learning_rate', 'goal_focused',
-                   'num_time_steps_train', 'avg_score_train', 'action_blocker_precision_train',
-                   'action_blocker_recall_train', 'num_actions_blocked_train',
-                   'num_time_steps_test', 'avg_score_test',
-                   'action_blocker_precision_test', 'action_blocker_recall_test',
-                   'num_actions_blocked_test',
-                   'avg_loss']
-
-    is_observation_space_well_defined = not is_observation_space_not_well_defined(env)
-
-    if is_observation_space_well_defined:
-        result_cols.insert(0, 'normalize_state')
-
-    results = pd.DataFrame(columns=result_cols)
-
-    normalize_state_flags = [False, True] if is_observation_space_well_defined else [False]
-    enable_action_blocker_flags = [False, True] if penalty > 0 else [False]
-    for enable_action_blocker in enable_action_blocker_flags:
-        for normalize_state in normalize_state_flags:
-            for batch_size in [32, 64, 128]:
-                for randomized in [False, True]:
-                    for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                        for learning_rate in [0.001, 0.0001]:
-                            hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
-                                                  64, 128, 256, 512]
-                            hidden_layer_sizes = list(set(hidden_layer_sizes))
-                            for hidden_layer_size in hidden_layer_sizes:
-                                for goal in list({None, env_goal}):
-                                    if normalize_state:
-                                        env = NormalizedStates(env)
-                                        if goal:
-                                            goal = env.observation(goal)
-                                    network_optimizer_args = {
-                                        'learning_rate': learning_rate
-                                    }
-                                    result = torch_rl.dueling_ddqn.main.run(
-                                        env=env, n_games=n_games,
-                                        gamma=0.99,
-                                        epsilon=1.0, mem_size=1000,
-                                        batch_size=batch_size,
-                                        fc_dims=hidden_layer_size,
-                                        optimizer_type=optimizer_type,
-                                        eps_min=0.01,
-                                        eps_dec=5e-7,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        randomized=randomized,
-                                        enable_action_blocking=enable_action_blocker,
-                                        min_penalty=penalty,
-                                        goal=goal)
-
-                                    new_row = {
-                                        'batch_size': batch_size,
-                                        'hidden_layer_size': hidden_layer_size,
-                                        'replay': 'Randomized' if randomized else 'Sequenced',
-                                        'optimizer': optimizer_type.name.lower(),
-                                        'learning_rate': learning_rate,
-                                        'goal_focused': 'Yes' if goal else 'No'
-                                    }
-                                    for key in result:
-                                        new_row.update({key: result[key]})
-
-                                    if is_observation_space_well_defined:
-                                        new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
-                                    results = results.append(new_row, ignore_index=True)
+                                        new_row = {
+                                            'batch_size': batch_size,
+                                            'hidden_layer_size': hidden_layer_size,
+                                            'replay': 'Randomized' if randomized else 'Sequenced',
+                                            'optimizer': optimizer_type.name.lower(),
+                                            'learning_rate': learning_rate,
+                                            'goal_focused': 'Yes' if goal else 'No',
+                                            'is_double': 'Yes' if is_double else 'No'
+                                        }
+                                        for key in result:
+                                            new_row.update({key: result[key]})
+                                        if is_observation_space_well_defined:
+                                            new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
+                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False)
 
@@ -363,12 +222,8 @@ def run_dueling_ddqn(env, env_name, penalty, env_goal=None):
 def run_dqn_methods(env, env_name, penalty, env_goal=None):
     print('Running DQN')
     run_dqn(env, env_name, penalty, env_goal)
-    print('Running DDQN')
-    run_ddqn(env, env_name, penalty, env_goal)
     print('Running Dueling DQN')
     run_dueling_dqn(env, env_name, penalty, env_goal)
-    print('Running Dueling DDQN')
-    run_dueling_ddqn(env, env_name, penalty, env_goal)
 
 
 def run_reinforce(env, env_name, penalty, env_goal=None):
