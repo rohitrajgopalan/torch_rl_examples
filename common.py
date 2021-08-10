@@ -735,14 +735,14 @@ def run_all_td_methods(env, env_name, penalty, env_goal=None, env_move_matrix=No
         run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal, env_move_matrix)
 
 
-def run_ddpg(env, env_name):
+def run_ddpg(env, env_name, env_goal):
     n_games = (100, 10)
 
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_ddpg.csv'.format(env_name))
 
     result_cols = ['normalize_actions', 'batch_size', 'hidden_layer_size', 'replay', 'actor_learning_rate',
-                   'critic_learning_rate', 'tau',
+                   'critic_learning_rate', 'tau', 'goal_focused',
                    'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test',
                    'avg_policy_loss', 'avg_value_loss']
 
@@ -766,67 +766,59 @@ def run_ddpg(env, env_name):
                         for actor_learning_rate in [0.001, 0.0001]:
                             for critic_learning_rate in [0.001, 0.0001]:
                                 for tau in [1e-2, 1e-3]:
-                                    if normalize_actions:
-                                        env = NormalizedActions(env)
-                                    if normalize_state:
-                                        env = NormalizedStates(env)
-                                    actor_optimizer_args = {
-                                        'learning_rate': actor_learning_rate
-                                    }
-                                    critic_optimizer_args = {
-                                        'learning_rate': critic_learning_rate
-                                    }
-                                    print('Running instance of DDPG: Actions {0}normalized, {1} replay, batch size of '
-                                          '{2}, '
-                                          'hidden layer size of {3}, '
-                                          'actor learning rate of {4}, critic learning rate of {5} and tau {6} with '
-                                          '{0}normalized states'
-                                          .format('' if normalize_actions else 'un',
-                                                  'Randomized' if randomized else 'Sequenced', batch_size,
-                                                  hidden_layer_size,
-                                                  actor_learning_rate, critic_learning_rate, tau,
-                                                  '' if normalize_state else 'un'))
-                                    num_time_steps_train, avg_score_train, num_time_steps_test, avg_score_test, avg_policy_loss, avg_critic_loss = torch_rl.ddpg.main.run(
-                                        env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
-                                        batch_size=batch_size, randomized=randomized,
-                                        actor_optimizer_type=NetworkOptimizer.ADAM,
-                                        critic_optimizer_type=NetworkOptimizer.ADAM,
-                                        actor_optimizer_args=actor_optimizer_args,
-                                        critic_optimizer_args=critic_optimizer_args
-                                    )
+                                    for goal in list({None, env_goal}):
+                                        if normalize_actions:
+                                            env = NormalizedActions(env)
+                                        if normalize_state:
+                                            env = NormalizedStates(env)
+                                            if goal:
+                                                goal = env.observation(goal)
+                                        actor_optimizer_args = {
+                                            'learning_rate': actor_learning_rate
+                                        }
+                                        critic_optimizer_args = {
+                                            'learning_rate': critic_learning_rate
+                                        }
+                                        result = torch_rl.ddpg.main.run(
+                                            env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
+                                            batch_size=batch_size,
+                                            actor_optimizer_type=NetworkOptimizer.ADAM,
+                                            critic_optimizer_type=NetworkOptimizer.ADAM,
+                                            actor_optimizer_args=actor_optimizer_args,
+                                            critic_optimizer_args=critic_optimizer_args,
+                                            goal=goal
+                                        )
 
-                                    new_row = {
-                                        'normalize_actions': 'Yes' if normalize_actions else 'No',
-                                        'batch_size': batch_size,
-                                        'hidden_layer_size': hidden_layer_size,
-                                        'replay': 'Randomized' if randomized else 'Sequenced',
-                                        'actor_learning_rate': actor_learning_rate,
-                                        'critic_learning_rate': critic_learning_rate,
-                                        'tau': tau,
-                                        'num_time_steps_train': num_time_steps_train,
-                                        'avg_score_train': round(avg_score_train, 5),
-                                        'num_time_steps_test': num_time_steps_test,
-                                        'avg_score_test': round(avg_score_test, 5),
-                                        'avg_policy_loss': round(avg_policy_loss, 5),
-                                        'avg_value_loss': round(avg_critic_loss, 5)
-                                    }
+                                        new_row = {
+                                            'normalize_actions': 'Yes' if normalize_actions else 'No',
+                                            'batch_size': batch_size,
+                                            'hidden_layer_size': hidden_layer_size,
+                                            'replay': 'Randomized' if randomized else 'Sequenced',
+                                            'actor_learning_rate': actor_learning_rate,
+                                            'critic_learning_rate': critic_learning_rate,
+                                            'tau': tau,
+                                            'goal_focused': 'Yes' if goal else 'No'
+                                        }
 
-                                    if is_observation_space_well_defined:
-                                        new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
+                                        for key in result:
+                                            new_row.update({key: result[key]})
 
-                                    results = results.append(new_row, ignore_index=True)
+                                        if is_observation_space_well_defined:
+                                            new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
+
+                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
 
-def run_td3(env, env_name):
+def run_td3(env, env_name, env_goal):
     n_games = 75
 
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_td3.csv'.format(env_name))
 
     result_cols = ['normalize_actions', 'batch_size', 'hidden_layer_size', 'replay', 'actor_learning_rate',
-                   'critic_learning_rate', 'tau',
+                   'critic_learning_rate', 'tau', 'goal_focused',
                    'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test',
                    'avg_policy_loss', 'avg_value1_loss',
                    'avg_value2_loss']
@@ -856,49 +848,43 @@ def run_td3(env, env_name):
                 for hidden_layer_size in hidden_layer_sizes:
                     for randomized in [False, True]:
                         for tau in [0.005, 0.01]:
-                            if normalize_actions:
-                                env = NormalizedActions(env)
-                            if normalize_state:
-                                env = NormalizedStates(env)
-                            print('Running instance of TD3: Actions {0}normalized, {1} replay, batch size of {2}, '
-                                  'hidden layer size of {3}, '
-                                  'and tau {4} with {5}normalized states'
-                                  .format('' if normalize_actions else 'un',
-                                          'Randomized' if randomized else 'Sequenced',
-                                          batch_size, hidden_layer_size,
-                                          tau, '' if normalize_state else 'un'))
-                            num_time_steps_train, avg_score_train, num_time_steps_test, avg_score_test, avg_policy_loss, avg_value1_loss, avg_value2_loss = torch_rl.td3.main.run(
-                                env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
-                                batch_size=batch_size, randomized=randomized,
-                                actor_optimizer_type=NetworkOptimizer.ADAM,
-                                critic_optimizer_type=NetworkOptimizer.ADAM, actor_optimizer_args=actor_optimizer_args,
-                                critic_optimizer_args=critic_optimizer_args
-                            )
+                            for goal in list({None, env_goal}):
+                                if normalize_actions:
+                                    env = NormalizedActions(env)
+                                if normalize_state:
+                                    env = NormalizedStates(env)
+                                    if goal:
+                                        goal = env.observation(goal)
+                                result = torch_rl.td3.main.run(
+                                    env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
+                                    batch_size=batch_size,
+                                    actor_optimizer_type=NetworkOptimizer.ADAM,
+                                    critic_optimizer_type=NetworkOptimizer.ADAM, actor_optimizer_args=actor_optimizer_args,
+                                    critic_optimizer_args=critic_optimizer_args,
+                                    goal=goal
+                                )
 
-                            new_row = {
-                                'normalize_actions': normalize_actions,
-                                'batch_size': batch_size,
-                                'hidden_layer_size': hidden_layer_size,
-                                'replay': 'Randomized' if randomized else 'Sequenced',
-                                'tau': tau,
-                                'num_time_steps_train': num_time_steps_train,
-                                'avg_score_train': round(avg_score_test, 5),
-                                'num_time_steps_test': num_time_steps_train,
-                                'avg_score_test': round(avg_score_test, 5),
-                                'avg_policy_loss': round(avg_policy_loss, 5),
-                                'avg_value1_loss': round(avg_value1_loss, 5),
-                                'avg_value2_loss': round(avg_value2_loss, 5)
-                            }
+                                new_row = {
+                                    'normalize_actions': normalize_actions,
+                                    'batch_size': batch_size,
+                                    'hidden_layer_size': hidden_layer_size,
+                                    'replay': 'Randomized' if randomized else 'Sequenced',
+                                    'tau': tau,
+                                    'goal_focused': 'Yes' if goal else 'No'
+                                }
 
-                            if is_observation_space_well_defined:
-                                new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
+                                for key in result:
+                                    new_row.update({key: result[key]})
 
-                            results = results.append(new_row, ignore_index=True)
+                                if is_observation_space_well_defined:
+                                    new_row.update({'normalize_state': 'Yes' if normalize_state else 'No'})
+
+                                results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
 
-def run_actor_critic_continuous_methods(env, env_name):
+def run_actor_critic_continuous_methods(env, env_name, env_goal=None):
     print('Running', env_name)
-    run_ddpg(env, env_name)
-    run_td3(env, env_name)
+    run_ddpg(env, env_name, env_goal)
+    run_td3(env, env_name, env_goal)
