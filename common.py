@@ -98,9 +98,9 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_move_matrix
                                                 else [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
                                             for epsilon in epsilons:
                                                 policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
-                                                for move_matrix in list({None, env_move_matrix}):
-                                                    if move_matrix is not None:
-                                                        policy_args.update({'move_matrix': move_matrix})
+                                                for using_move_matrix in list({False, env_move_matrix is not None}):
+                                                    if using_move_matrix:
+                                                        policy_args.update({'move_matrix': env_move_matrix})
                                                     if normalize_state:
                                                         env = NormalizedStates(env)
                                                         if goal:
@@ -134,7 +134,7 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_move_matrix
                                                         'is_double': 'Yes' if is_double else 'No',
                                                         'enable_decay': 'Yes' if enable_decay else 'No',
                                                         'epsilon': epsilon,
-                                                        'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                                     }
                                                     for key in result:
                                                         new_row.update({key: result[key]})
@@ -183,9 +183,9 @@ def run_td_softmax(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                     for goal in list({None, env_goal}):
                                         for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
                                             policy_args.update({'tau': tau})
-                                            for move_matrix in list({None, env_move_matrix}):
-                                                if move_matrix is not None:
-                                                    policy_args.update({'move_matrix': move_matrix})
+                                            for using_move_matrix in list({False, env_move_matrix is not None}):
+                                                if using_move_matrix:
+                                                    policy_args.update({'move_matrix': env_move_matrix})
                                                 if normalize_state:
                                                     env = NormalizedStates(env)
                                                     if goal:
@@ -218,7 +218,7 @@ def run_td_softmax(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                                     'goal_focused': 'Yes' if goal else 'No',
                                                     'is_double': 'Yes' if is_double else 'No',
                                                     'tau': tau,
-                                                    'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                    'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                                 }
                                                 for key in result:
                                                     new_row.update({key: result[key]})
@@ -263,9 +263,9 @@ def run_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                 hidden_layer_sizes = list(set(hidden_layer_sizes))
                                 for hidden_layer_size in hidden_layer_sizes:
                                     for goal in list({None, env_goal}):
-                                        for move_matrix in list({None, env_move_matrix}):
-                                            if move_matrix is not None:
-                                                policy_args.update({'move_matrix': move_matrix})
+                                        for using_move_matrix in list({False, env_move_matrix is not None}):
+                                            if using_move_matrix:
+                                                policy_args.update({'move_matrix': env_move_matrix})
                                             if normalize_state:
                                                 env = NormalizedStates(env)
                                                 if goal:
@@ -297,7 +297,7 @@ def run_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                                 'learning_rate': learning_rate,
                                                 'goal_focused': 'Yes' if goal else 'No',
                                                 'is_double': 'Yes' if is_double else 'No',
-                                                'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                             }
                                             for key in result:
                                                 new_row.update({key: result[key]})
@@ -345,9 +345,9 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_move_mat
                                 hidden_layer_sizes = list(set(hidden_layer_sizes))
                                 for hidden_layer_size in hidden_layer_sizes:
                                     for goal in list({None, env_goal}):
-                                        for move_matrix in list({None, env_move_matrix}):
-                                            if move_matrix is not None:
-                                                policy_args.update({'move_matrix': move_matrix})
+                                        for using_move_matrix in list({False, env_move_matrix is not None}):
+                                            if using_move_matrix:
+                                                policy_args.update({'move_matrix': env_move_matrix})
                                             if normalize_state:
                                                 env = NormalizedStates(env)
                                                 if goal:
@@ -379,7 +379,7 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_move_mat
                                                 'learning_rate': learning_rate,
                                                 'goal_focused': 'Yes' if goal else 'No',
                                                 'is_double': 'Yes' if is_double else 'No',
-                                                'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                             }
                                             for key in result:
                                                 new_row.update({key: result[key]})
@@ -429,9 +429,9 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_mov
                                                 else [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
                                             for epsilon in epsilons:
                                                 policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
-                                                for move_matrix in list({None, env_move_matrix}):
-                                                    if move_matrix is not None:
-                                                        policy_args.update({'move_matrix': move_matrix})
+                                                for using_move_matrix in list({False, env_move_matrix is not None}):
+                                                    if using_move_matrix:
+                                                        policy_args.update({'move_matrix': env_move_matrix})
                                                     if normalize_state:
                                                         env = NormalizedStates(env)
                                                         if goal:
@@ -465,7 +465,7 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_mov
                                                         'is_double': 'Yes' if is_double else 'No',
                                                         'enable_decay': 'Yes' if enable_decay else 'No',
                                                         'epsilon': epsilon,
-                                                        'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                                     }
                                                     for key in result:
                                                         new_row.update({key: result[key]})
@@ -513,9 +513,9 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None, env_move_matri
                                     for goal in list({None, env_goal}):
                                         for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
                                             policy_args.update({'tau': tau})
-                                            for move_matrix in list({None, env_move_matrix}):
-                                                if move_matrix is not None:
-                                                    policy_args.update({'move_matrix': move_matrix})
+                                            for using_move_matrix in list({False, env_move_matrix is not None}):
+                                                if using_move_matrix:
+                                                    policy_args.update({'move_matrix': env_move_matrix})
                                                 if normalize_state:
                                                     env = NormalizedStates(env)
                                                     if goal:
@@ -548,7 +548,7 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None, env_move_matri
                                                     'goal_focused': 'Yes' if goal else 'No',
                                                     'is_double': 'Yes' if is_double else 'No',
                                                     'tau': tau,
-                                                    'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                    'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                                 }
                                                 for key in result:
                                                     new_row.update({key: result[key]})
@@ -594,9 +594,9 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=No
                                 hidden_layer_sizes = list(set(hidden_layer_sizes))
                                 for hidden_layer_size in hidden_layer_sizes:
                                     for goal in list({None, env_goal}):
-                                        for move_matrix in list({None, env_move_matrix}):
-                                            if move_matrix is not None:
-                                                policy_args.update({'move_matrix': move_matrix})
+                                        for using_move_matrix in list({False, env_move_matrix is not None}):
+                                            if using_move_matrix:
+                                                policy_args.update({'move_matrix': env_move_matrix})
                                             if normalize_state:
                                                 env = NormalizedStates(env)
                                                 if goal:
@@ -628,7 +628,7 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=No
                                                 'learning_rate': learning_rate,
                                                 'goal_focused': 'Yes' if goal else 'No',
                                                 'is_double': 'Yes' if is_double else 'No',
-                                                'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                             }
                                             for key in result:
                                                 new_row.update({key: result[key]})
@@ -676,9 +676,9 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_
                                 hidden_layer_sizes = list(set(hidden_layer_sizes))
                                 for hidden_layer_size in hidden_layer_sizes:
                                     for goal in list({None, env_goal}):
-                                        for move_matrix in list({None, env_move_matrix}):
-                                            if move_matrix is not None:
-                                                policy_args.update({'move_matrix': move_matrix})
+                                        for using_move_matrix in list({False, env_move_matrix is not None}):
+                                            if using_move_matrix:
+                                                policy_args.update({'move_matrix': env_move_matrix})
                                             if normalize_state:
                                                 env = NormalizedStates(env)
                                                 if goal:
@@ -710,7 +710,7 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_
                                                 'learning_rate': learning_rate,
                                                 'goal_focused': 'Yes' if goal else 'No',
                                                 'is_double': 'Yes' if is_double else 'No',
-                                                'using_move_matrix': 'Yes' if move_matrix else 'No'
+                                                'using_move_matrix': 'Yes' if using_move_matrix else 'No'
                                             }
                                             for key in result:
                                                 new_row.update({key: result[key]})
