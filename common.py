@@ -110,11 +110,14 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_move_matrix
                                                         network_optimizer_args = {
                                                             'learning_rate': learning_rate
                                                         }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
                                                         result = torch_rl.td.main.run(
                                                             env=env, n_games=n_games, gamma=0.99,
                                                             mem_size=1000,
                                                             batch_size=batch_size,
-                                                            fc_dims=hidden_layer_size,
+                                                            network_args=network_args,
                                                             optimizer_type=optimizer_type,
                                                             replace=1000,
                                                             optimizer_args=network_optimizer_args,
@@ -198,11 +201,14 @@ def run_td_softmax(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                                     network_optimizer_args = {
                                                         'learning_rate': learning_rate
                                                     }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
                                                     result = torch_rl.td.main.run(
                                                         env=env, n_games=n_games, gamma=0.99,
                                                         mem_size=1000,
                                                         batch_size=batch_size,
-                                                        fc_dims=hidden_layer_size,
+                                                        network_args=network_args,
                                                         optimizer_type=optimizer_type,
                                                         replace=1000,
                                                         optimizer_args=network_optimizer_args,
@@ -281,11 +287,14 @@ def run_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
                                                 }
+                                                network_args = {
+                                                    'fc_dims': hidden_layer_size
+                                                }
                                                 result = torch_rl.td.main.run(
                                                     env=env, n_games=n_games, gamma=0.99,
                                                     mem_size=1000,
                                                     batch_size=batch_size,
-                                                    fc_dims=hidden_layer_size,
+                                                    network_args=network_args,
                                                     optimizer_type=optimizer_type,
                                                     replace=1000,
                                                     optimizer_args=network_optimizer_args,
@@ -367,11 +376,14 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_move_mat
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
                                                 }
+                                                network_args = {
+                                                    'fc_dims': hidden_layer_size
+                                                }
                                                 result = torch_rl.td.main.run(
                                                     env=env, n_games=n_games, gamma=0.99,
                                                     mem_size=1000,
                                                     batch_size=batch_size,
-                                                    fc_dims=hidden_layer_size,
+                                                    network_args=network_args,
                                                     optimizer_type=optimizer_type,
                                                     replace=1000,
                                                     optimizer_args=network_optimizer_args,
@@ -456,11 +468,14 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_mov
                                                         network_optimizer_args = {
                                                             'learning_rate': learning_rate
                                                         }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
                                                         result = torch_rl.dueling_td.main.run(
                                                             env=env, n_games=n_games, gamma=0.99,
                                                             mem_size=1000,
                                                             batch_size=batch_size,
-                                                            fc_dims=hidden_layer_size,
+                                                            network_args=network_args,
                                                             optimizer_type=optimizer_type,
                                                             replace=1000,
                                                             optimizer_args=network_optimizer_args,
@@ -544,11 +559,14 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None, env_move_matri
                                                     network_optimizer_args = {
                                                         'learning_rate': learning_rate
                                                     }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
                                                     result = torch_rl.dueling_td.main.run(
                                                         env=env, n_games=n_games, gamma=0.99,
                                                         mem_size=1000,
                                                         batch_size=batch_size,
-                                                        fc_dims=hidden_layer_size,
+                                                        network_args=network_args,
                                                         optimizer_type=optimizer_type,
                                                         replace=1000,
                                                         optimizer_args=network_optimizer_args,
@@ -628,11 +646,14 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=No
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
                                                 }
+                                                network_args = {
+                                                    'fc_dims': hidden_layer_size
+                                                }
                                                 result = torch_rl.dueling_td.main.run(
                                                     env=env, n_games=n_games, gamma=0.99,
                                                     mem_size=1000,
                                                     batch_size=batch_size,
-                                                    fc_dims=hidden_layer_size,
+                                                    network_args=network_args,
                                                     optimizer_type=optimizer_type,
                                                     replace=1000,
                                                     optimizer_args=network_optimizer_args,
@@ -714,11 +735,14 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
                                                 }
+                                                network_args = {
+                                                    'fc_dims': hidden_layer_size
+                                                }
                                                 result = torch_rl.dueling_td.main.run(
                                                     env=env, n_games=n_games, gamma=0.99,
                                                     mem_size=1000,
                                                     batch_size=batch_size,
-                                                    fc_dims=hidden_layer_size,
+                                                    network_args=network_args,
                                                     optimizer_type=optimizer_type,
                                                     replace=1000,
                                                     optimizer_args=network_optimizer_args,
@@ -811,8 +835,11 @@ def run_ddpg(env, env_name, env_goal):
                                             critic_optimizer_args = {
                                                 'learning_rate': critic_learning_rate
                                             }
+                                            network_args = {
+                                                'fc_dims': hidden_layer_size
+                                            }
                                             result = torch_rl.ddpg.main.run(
-                                                env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
+                                                env=env, n_games=n_games, tau=tau, network_args=network_args,
                                                 batch_size=batch_size,
                                                 actor_optimizer_type=NetworkOptimizer.ADAM,
                                                 critic_optimizer_type=NetworkOptimizer.ADAM,
@@ -890,8 +917,11 @@ def run_td3(env, env_name, env_goal):
                                         env = NormalizedStates(env)
                                         if goal:
                                             goal = env.observation(goal)
+                                    network_args = {
+                                        'fc_dims': hidden_layer_size
+                                    }
                                     result = torch_rl.td3.main.run(
-                                        env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
+                                        env=env, n_games=n_games, tau=tau, network_args=network_args,
                                         batch_size=batch_size,
                                         actor_optimizer_type=NetworkOptimizer.ADAM,
                                         critic_optimizer_type=NetworkOptimizer.ADAM,
@@ -1006,11 +1036,14 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
                                                             network_optimizer_args = {
                                                                 'learning_rate': learning_rate
                                                             }
+                                                            network_args = {
+                                                                'fc_dims': hidden_layer_size
+                                                            }
                                                             result = run_with_td(
                                                                 env=env, n_games=n_games, gamma=0.99,
                                                                 mem_size=1000000,
                                                                 batch_size=batch_size,
-                                                                fc_dims=hidden_layer_size,
+                                                                network_args=network_args,
                                                                 optimizer_type=optimizer_type,
                                                                 replace=1000,
                                                                 optimizer_args=network_optimizer_args,
@@ -1090,11 +1123,14 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
                                                         network_optimizer_args = {
                                                             'learning_rate': learning_rate
                                                         }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
                                                         result = run_with_td(
                                                             env=env, n_games=n_games, gamma=0.99,
                                                             mem_size=1000000,
                                                             batch_size=batch_size,
-                                                            fc_dims=hidden_layer_size,
+                                                            network_args=network_args,
                                                             optimizer_type=optimizer_type,
                                                             replace=1000,
                                                             optimizer_args=network_optimizer_args,
@@ -1169,11 +1205,14 @@ def run_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal=None,
                                                     network_optimizer_args = {
                                                         'learning_rate': learning_rate
                                                     }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
                                                     result = run_with_td(
                                                         env=env, n_games=n_games, gamma=0.99,
                                                         mem_size=1000000,
                                                         batch_size=batch_size,
-                                                        fc_dims=hidden_layer_size,
+                                                        network_args=network_args,
                                                         optimizer_type=optimizer_type,
                                                         replace=1000,
                                                         optimizer_args=network_optimizer_args,
@@ -1248,11 +1287,14 @@ def run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, 
                                                     network_optimizer_args = {
                                                         'learning_rate': learning_rate
                                                     }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
                                                     result = run_with_td(
                                                         env=env, n_games=n_games, gamma=0.99,
                                                         mem_size=1000000,
                                                         batch_size=batch_size,
-                                                        fc_dims=hidden_layer_size,
+                                                        network_args=network_args,
                                                         optimizer_type=optimizer_type,
                                                         replace=1000,
                                                         optimizer_args=network_optimizer_args,
@@ -1333,11 +1375,14 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, pena
                                                             network_optimizer_args = {
                                                                 'learning_rate': learning_rate
                                                             }
+                                                            network_args = {
+                                                                'fc_dims': hidden_layer_size
+                                                            }
                                                             result = run_with_dueling_td(
                                                                 env=env, n_games=n_games, gamma=0.99,
                                                                 mem_size=1000000,
                                                                 batch_size=batch_size,
-                                                                fc_dims=hidden_layer_size,
+                                                                network_args=network_args,
                                                                 optimizer_type=optimizer_type,
                                                                 replace=1000,
                                                                 optimizer_args=network_optimizer_args,
@@ -1416,11 +1461,14 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, en
                                                         network_optimizer_args = {
                                                             'learning_rate': learning_rate
                                                         }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
                                                         result = run_with_dueling_td(
                                                             env=env, n_games=n_games, gamma=0.99,
                                                             mem_size=1000000,
                                                             batch_size=batch_size,
-                                                            fc_dims=hidden_layer_size,
+                                                            network_args=network_args,
                                                             optimizer_type=optimizer_type,
                                                             replace=1000,
                                                             optimizer_args=network_optimizer_args,
@@ -1495,11 +1543,14 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_go
                                                     network_optimizer_args = {
                                                         'learning_rate': learning_rate
                                                     }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
                                                     result = run_with_dueling_td(
                                                         env=env, n_games=n_games, gamma=0.99,
                                                         mem_size=1000000,
                                                         batch_size=batch_size,
-                                                        fc_dims=hidden_layer_size,
+                                                        network_args=network_args,
                                                         optimizer_type=optimizer_type,
                                                         replace=1000,
                                                         optimizer_args=network_optimizer_args,
@@ -1574,11 +1625,14 @@ def run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, p
                                                     network_optimizer_args = {
                                                         'learning_rate': learning_rate
                                                     }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
                                                     result = run_with_dueling_td(
                                                         env=env, n_games=n_games, gamma=0.99,
                                                         mem_size=1000000,
                                                         batch_size=batch_size,
-                                                        fc_dims=hidden_layer_size,
+                                                        network_args=network_args,
                                                         optimizer_type=optimizer_type,
                                                         replace=1000,
                                                         optimizer_args=network_optimizer_args,
@@ -1649,8 +1703,11 @@ def run_ddpg_heuristics(env, env_name, heuristic_func, env_goal, **args):
                                         critic_optimizer_args = {
                                             'learning_rate': critic_learning_rate
                                         }
+                                        network_args = {
+                                            'fc_dims': hidden_layer_size
+                                        }
                                         result = run_with_ddpg(
-                                            env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
+                                            env=env, n_games=n_games, tau=tau, network_args=network_args,
                                             batch_size=batch_size,
                                             actor_optimizer_type=NetworkOptimizer.ADAM,
                                             critic_optimizer_type=NetworkOptimizer.ADAM,
@@ -1715,8 +1772,11 @@ def run_td3_heuristics(env, env_name, heuristic_func, env_goal, **args):
                                         critic_optimizer_args = {
                                             'learning_rate': critic_learning_rate
                                         }
+                                        network_args = {
+                                            'fc_dims': hidden_layer_size
+                                        }
                                         result = run_with_td3(
-                                            env=env, n_games=n_games, tau=tau, fc_dims=hidden_layer_size,
+                                            env=env, n_games=n_games, tau=tau, network_args=network_args,
                                             batch_size=batch_size,
                                             actor_optimizer_type=NetworkOptimizer.ADAM,
                                             critic_optimizer_type=NetworkOptimizer.ADAM,
