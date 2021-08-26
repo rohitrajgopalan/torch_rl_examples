@@ -112,16 +112,11 @@ env_continuous = gym.make('MountainCarContinuous-v0')
 
 def mountain_car_continuous_heuristic(self, observation):
     position, velocity = observation
+    action = np.array([1.0])
     if position < 0:
-        if velocity >= 1e-4:
-            return np.random.uniform(low=0, high=1, size=(1,))
-        else:
-            return np.random.uniform(low=-1, high=0, size=(1,))
+        return action if velocity >= 1e-4 else -action
     else:
-        if velocity >= 1e-4:
-            return np.random.uniform(low=-1, high=0, size=(1,))
-        else:
-            return np.random.uniform(low=0, high=1, size=(1,))
+        return -action if velocity >= 1e-4 else action
 
 
 run_heuristics(env_continuous, 'mountain_car_continuous', mountain_car_continuous_heuristic, 0, np.array([0.45, 0]))
