@@ -67,7 +67,7 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_move_matrix
                             '{0}_td_epsilon_greedy.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'using_move_matrix', 'assign_priority',
+                   'using_move_matrix', 'assign_priority', 'enable_action_blocker', 'use_ml_for_action_blocker',
                    'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
                    'num_time_steps_train', 'avg_score_train',
                    'num_actions_blocked_train',
@@ -101,55 +101,60 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_move_matrix
                                                 policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
                                                 for using_move_matrix in list({False, env_move_matrix is not None}):
                                                     for assign_priority in [False, True]:
-                                                        if using_move_matrix:
-                                                            policy_args.update({'move_matrix': env_move_matrix})
-                                                        if normalize_state:
-                                                            env = NormalizedStates(env)
-                                                            if goal:
-                                                                goal = env.observation(goal)
-                                                        network_optimizer_args = {
-                                                            'learning_rate': learning_rate
-                                                        }
-                                                        network_args = {
-                                                            'fc_dims': hidden_layer_size
-                                                        }
-                                                        result = torch_rl.td.main.run(
-                                                            env=env, n_games=n_games, gamma=0.99,
-                                                            mem_size=1000,
-                                                            batch_size=batch_size,
-                                                            network_args=network_args,
-                                                            optimizer_type=optimizer_type,
-                                                            replace=1000,
-                                                            optimizer_args=network_optimizer_args,
-                                                            enable_action_blocking=enable_action_blocker,
-                                                            min_penalty=penalty,
-                                                            goal=goal,
-                                                            is_double=is_double,
-                                                            algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.EPSILON_GREEDY,
-                                                            policy_args=policy_args,
-                                                            assign_priority=assign_priority)
+                                                        use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                                        for use_ml_for_action_blocker in use_ml_flags:
+                                                            if using_move_matrix:
+                                                                policy_args.update({'move_matrix': env_move_matrix})
+                                                            if normalize_state:
+                                                                env = NormalizedStates(env)
+                                                                if goal:
+                                                                    goal = env.observation(goal)
+                                                            network_optimizer_args = {
+                                                                'learning_rate': learning_rate
+                                                            }
+                                                            network_args = {
+                                                                'fc_dims': hidden_layer_size
+                                                            }
+                                                            result = torch_rl.td.main.run(
+                                                                env=env, n_games=n_games, gamma=0.99,
+                                                                mem_size=1000,
+                                                                batch_size=batch_size,
+                                                                network_args=network_args,
+                                                                optimizer_type=optimizer_type,
+                                                                replace=1000,
+                                                                optimizer_args=network_optimizer_args,
+                                                                enable_action_blocking=enable_action_blocker,
+                                                                min_penalty=penalty,
+                                                                goal=goal,
+                                                                is_double=is_double,
+                                                                algorithm_type=algorithm_type,
+                                                                policy_type=PolicyType.EPSILON_GREEDY,
+                                                                policy_args=policy_args,
+                                                                assign_priority=assign_priority,
+                                                                use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                        new_row = {
-                                                            'batch_size': batch_size,
-                                                            'hidden_layer_size': hidden_layer_size,
-                                                            'algorithm_type': algorithm_type,
-                                                            'optimizer': optimizer_type.name.lower(),
-                                                            'learning_rate': learning_rate,
-                                                            'goal_focused': 'Yes' if goal else 'No',
-                                                            'is_double': 'Yes' if is_double else 'No',
-                                                            'enable_decay': 'Yes' if enable_decay else 'No',
-                                                            'epsilon': epsilon,
-                                                            'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                            'assign_priority': 'Yes' if assign_priority else 'No',
-                                                        }
-                                                        for key in result:
-                                                            new_row.update({key: result[key]})
+                                                            new_row = {
+                                                                'batch_size': batch_size,
+                                                                'hidden_layer_size': hidden_layer_size,
+                                                                'algorithm_type': algorithm_type,
+                                                                'optimizer': optimizer_type.name.lower(),
+                                                                'learning_rate': learning_rate,
+                                                                'goal_focused': 'Yes' if goal else 'No',
+                                                                'is_double': 'Yes' if is_double else 'No',
+                                                                'enable_decay': 'Yes' if enable_decay else 'No',
+                                                                'epsilon': epsilon,
+                                                                'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                                'assign_priority': 'Yes' if assign_priority else 'No',
+                                                                'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                                'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                            }
+                                                            for key in result:
+                                                                new_row.update({key: result[key]})
 
-                                                        if is_observation_space_well_defined:
-                                                            new_row.update(
-                                                                {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                        results = results.append(new_row, ignore_index=True)
+                                                            if is_observation_space_well_defined:
+                                                                new_row.update(
+                                                                    {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                            results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -161,7 +166,7 @@ def run_td_softmax(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                             '{0}_td_softmax.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'using_move_matrix', 'assign_priority',
+                   'using_move_matrix', 'assign_priority', 'enable_action_blocker', 'use_ml_for_action_blocker',
                    'is_double', 'algorithm_type', 'tau', 'num_time_steps_train', 'avg_score_train',
                    'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test', 'num_actions_blocked_test', 'avg_loss']
@@ -192,54 +197,59 @@ def run_td_softmax(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                             policy_args.update({'tau': tau})
                                             for using_move_matrix in list({False, env_move_matrix is not None}):
                                                 for assign_priority in [False, True]:
-                                                    if using_move_matrix:
-                                                        policy_args.update({'move_matrix': env_move_matrix})
-                                                    if normalize_state:
-                                                        env = NormalizedStates(env)
-                                                        if goal:
-                                                            goal = env.observation(goal)
-                                                    network_optimizer_args = {
-                                                        'learning_rate': learning_rate
-                                                    }
-                                                    network_args = {
-                                                        'fc_dims': hidden_layer_size
-                                                    }
-                                                    result = torch_rl.td.main.run(
-                                                        env=env, n_games=n_games, gamma=0.99,
-                                                        mem_size=1000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        enable_action_blocking=enable_action_blocker,
-                                                        min_penalty=penalty,
-                                                        goal=goal,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.SOFTMAX,
-                                                        policy_args=policy_args,
-                                                        assign_priority=assign_priority)
+                                                    use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                                    for use_ml_for_action_blocker in use_ml_flags:
+                                                        if using_move_matrix:
+                                                            policy_args.update({'move_matrix': env_move_matrix})
+                                                        if normalize_state:
+                                                            env = NormalizedStates(env)
+                                                            if goal:
+                                                                goal = env.observation(goal)
+                                                        network_optimizer_args = {
+                                                            'learning_rate': learning_rate
+                                                        }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
+                                                        result = torch_rl.td.main.run(
+                                                            env=env, n_games=n_games, gamma=0.99,
+                                                            mem_size=1000,
+                                                            batch_size=batch_size,
+                                                            network_args=network_args,
+                                                            optimizer_type=optimizer_type,
+                                                            replace=1000,
+                                                            optimizer_args=network_optimizer_args,
+                                                            enable_action_blocking=enable_action_blocker,
+                                                            min_penalty=penalty,
+                                                            goal=goal,
+                                                            is_double=is_double,
+                                                            algorithm_type=algorithm_type,
+                                                            policy_type=PolicyType.SOFTMAX,
+                                                            policy_args=policy_args,
+                                                            assign_priority=assign_priority,
+                                                            use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                    new_row = {
-                                                        'batch_size': batch_size,
-                                                        'hidden_layer_size': hidden_layer_size,
-                                                        'algorithm_type': algorithm_type,
-                                                        'optimizer': optimizer_type.name.lower(),
-                                                        'learning_rate': learning_rate,
-                                                        'goal_focused': 'Yes' if goal else 'No',
-                                                        'is_double': 'Yes' if is_double else 'No',
-                                                        'tau': tau,
-                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                        'assign_priority': 'Yes' if assign_priority else 'No'
-                                                    }
-                                                    for key in result:
-                                                        new_row.update({key: result[key]})
+                                                        new_row = {
+                                                            'batch_size': batch_size,
+                                                            'hidden_layer_size': hidden_layer_size,
+                                                            'algorithm_type': algorithm_type,
+                                                            'optimizer': optimizer_type.name.lower(),
+                                                            'learning_rate': learning_rate,
+                                                            'goal_focused': 'Yes' if goal else 'No',
+                                                            'is_double': 'Yes' if is_double else 'No',
+                                                            'tau': tau,
+                                                            'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                            'assign_priority': 'Yes' if assign_priority else 'No',
+                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                            'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                        }
+                                                        for key in result:
+                                                            new_row.update({key: result[key]})
 
-                                                    if is_observation_space_well_defined:
-                                                        new_row.update(
-                                                            {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                    results = results.append(new_row, ignore_index=True)
+                                                        if is_observation_space_well_defined:
+                                                            new_row.update(
+                                                                {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -251,6 +261,7 @@ def run_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=None):
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'using_move_matrix', 'assign_priority', 'is_double', 'algorithm_type',
+                   'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test', 'num_actions_blocked_test', 'avg_loss']
 
@@ -278,53 +289,58 @@ def run_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=None):
                                     for goal in list({None, env_goal}):
                                         for using_move_matrix in list({False, env_move_matrix is not None}):
                                             for assign_priority in [False, True]:
-                                                if using_move_matrix:
-                                                    policy_args.update({'move_matrix': env_move_matrix})
-                                                if normalize_state:
-                                                    env = NormalizedStates(env)
-                                                    if goal:
-                                                        goal = env.observation(goal)
-                                                network_optimizer_args = {
-                                                    'learning_rate': learning_rate
-                                                }
-                                                network_args = {
-                                                    'fc_dims': hidden_layer_size
-                                                }
-                                                result = torch_rl.td.main.run(
-                                                    env=env, n_games=n_games, gamma=0.99,
-                                                    mem_size=1000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    enable_action_blocking=enable_action_blocker,
-                                                    min_penalty=penalty,
-                                                    goal=goal,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.UCB,
-                                                    policy_args=policy_args,
-                                                    assign_priority=assign_priority)
+                                                use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                                for use_ml_for_action_blocker in use_ml_flags:
+                                                    if using_move_matrix:
+                                                        policy_args.update({'move_matrix': env_move_matrix})
+                                                    if normalize_state:
+                                                        env = NormalizedStates(env)
+                                                        if goal:
+                                                            goal = env.observation(goal)
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    result = torch_rl.td.main.run(
+                                                        env=env, n_games=n_games, gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.UCB,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                new_row = {
-                                                    'batch_size': batch_size,
-                                                    'hidden_layer_size': hidden_layer_size,
-                                                    'algorithm_type': algorithm_type,
-                                                    'optimizer': optimizer_type.name.lower(),
-                                                    'learning_rate': learning_rate,
-                                                    'goal_focused': 'Yes' if goal else 'No',
-                                                    'is_double': 'Yes' if is_double else 'No',
-                                                    'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                    'assign_priority': 'Yes' if assign_priority else 'No'
-                                                }
-                                                for key in result:
-                                                    new_row.update({key: result[key]})
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
 
-                                                if is_observation_space_well_defined:
-                                                    new_row.update(
-                                                        {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                results = results.append(new_row, ignore_index=True)
+                                                    if is_observation_space_well_defined:
+                                                        new_row.update(
+                                                            {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -338,6 +354,7 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_move_mat
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'using_move_matrix', 'assign_priority', 'is_double', 'algorithm_type',
+                   'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test', 'num_actions_blocked_test', 'avg_loss']
 
@@ -367,53 +384,58 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_move_mat
                                     for goal in list({None, env_goal}):
                                         for using_move_matrix in list({False, env_move_matrix is not None}):
                                             for assign_priority in [False, True]:
-                                                if using_move_matrix:
-                                                    policy_args.update({'move_matrix': env_move_matrix})
-                                                if normalize_state:
-                                                    env = NormalizedStates(env)
-                                                    if goal:
-                                                        goal = env.observation(goal)
-                                                network_optimizer_args = {
-                                                    'learning_rate': learning_rate
-                                                }
-                                                network_args = {
-                                                    'fc_dims': hidden_layer_size
-                                                }
-                                                result = torch_rl.td.main.run(
-                                                    env=env, n_games=n_games, gamma=0.99,
-                                                    mem_size=1000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    enable_action_blocking=enable_action_blocker,
-                                                    min_penalty=penalty,
-                                                    goal=goal,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.THOMPSON_SAMPLING,
-                                                    policy_args=policy_args,
-                                                    assign_priority=assign_priority)
+                                                use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                                for use_ml_for_action_blocker in use_ml_flags:
+                                                    if using_move_matrix:
+                                                        policy_args.update({'move_matrix': env_move_matrix})
+                                                    if normalize_state:
+                                                        env = NormalizedStates(env)
+                                                        if goal:
+                                                            goal = env.observation(goal)
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    result = torch_rl.td.main.run(
+                                                        env=env, n_games=n_games, gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.THOMPSON_SAMPLING,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                new_row = {
-                                                    'batch_size': batch_size,
-                                                    'hidden_layer_size': hidden_layer_size,
-                                                    'algorithm_type': algorithm_type,
-                                                    'optimizer': optimizer_type.name.lower(),
-                                                    'learning_rate': learning_rate,
-                                                    'goal_focused': 'Yes' if goal else 'No',
-                                                    'is_double': 'Yes' if is_double else 'No',
-                                                    'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                    'assign_priority': 'Yes' if assign_priority else 'No',
-                                                }
-                                                for key in result:
-                                                    new_row.update({key: result[key]})
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
 
-                                                if is_observation_space_well_defined:
-                                                    new_row.update(
-                                                        {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                results = results.append(new_row, ignore_index=True)
+                                                    if is_observation_space_well_defined:
+                                                        new_row.update(
+                                                            {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -425,8 +447,8 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_mov
                             '{0}_dueling_td_epsilon_greedy.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'assign_priority',
-                   'using_move_matrix', 'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
+                   'assign_priority', 'using_move_matrix', 'is_double', 'algorithm_type', 'enable_decay',
+                   'epsilon_start', 'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test', 'num_actions_blocked_test', 'avg_loss']
 
@@ -459,55 +481,59 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None, env_mov
                                                 policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
                                                 for using_move_matrix in list({False, env_move_matrix is not None}):
                                                     for assign_priority in [False, True]:
-                                                        if using_move_matrix:
-                                                            policy_args.update({'move_matrix': env_move_matrix})
-                                                        if normalize_state:
-                                                            env = NormalizedStates(env)
-                                                            if goal:
-                                                                goal = env.observation(goal)
-                                                        network_optimizer_args = {
-                                                            'learning_rate': learning_rate
-                                                        }
-                                                        network_args = {
-                                                            'fc_dims': hidden_layer_size
-                                                        }
-                                                        result = torch_rl.dueling_td.main.run(
-                                                            env=env, n_games=n_games, gamma=0.99,
-                                                            mem_size=1000,
-                                                            batch_size=batch_size,
-                                                            network_args=network_args,
-                                                            optimizer_type=optimizer_type,
-                                                            replace=1000,
-                                                            optimizer_args=network_optimizer_args,
-                                                            enable_action_blocking=enable_action_blocker,
-                                                            min_penalty=penalty,
-                                                            goal=goal,
-                                                            is_double=is_double,
-                                                            algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.EPSILON_GREEDY,
-                                                            policy_args=policy_args,
-                                                            assign_priority=assign_priority)
+                                                        for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                            if using_move_matrix:
+                                                                policy_args.update({'move_matrix': env_move_matrix})
+                                                            if normalize_state:
+                                                                env = NormalizedStates(env)
+                                                                if goal:
+                                                                    goal = env.observation(goal)
+                                                            network_optimizer_args = {
+                                                                'learning_rate': learning_rate
+                                                            }
+                                                            network_args = {
+                                                                'fc_dims': hidden_layer_size
+                                                            }
+                                                            result = torch_rl.dueling_td.main.run(
+                                                                env=env, n_games=n_games, gamma=0.99,
+                                                                mem_size=1000,
+                                                                batch_size=batch_size,
+                                                                network_args=network_args,
+                                                                optimizer_type=optimizer_type,
+                                                                replace=1000,
+                                                                optimizer_args=network_optimizer_args,
+                                                                enable_action_blocking=enable_action_blocker,
+                                                                min_penalty=penalty,
+                                                                goal=goal,
+                                                                is_double=is_double,
+                                                                algorithm_type=algorithm_type,
+                                                                policy_type=PolicyType.EPSILON_GREEDY,
+                                                                policy_args=policy_args,
+                                                                assign_priority=assign_priority,
+                                                                use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                        new_row = {
-                                                            'batch_size': batch_size,
-                                                            'hidden_layer_size': hidden_layer_size,
-                                                            'algorithm_type': algorithm_type,
-                                                            'optimizer': optimizer_type.name.lower(),
-                                                            'learning_rate': learning_rate,
-                                                            'goal_focused': 'Yes' if goal else 'No',
-                                                            'is_double': 'Yes' if is_double else 'No',
-                                                            'enable_decay': 'Yes' if enable_decay else 'No',
-                                                            'epsilon': epsilon,
-                                                            'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                            'assign_priority': 'Yes' if assign_priority else 'No'
-                                                        }
-                                                        for key in result:
-                                                            new_row.update({key: result[key]})
+                                                            new_row = {
+                                                                'batch_size': batch_size,
+                                                                'hidden_layer_size': hidden_layer_size,
+                                                                'algorithm_type': algorithm_type,
+                                                                'optimizer': optimizer_type.name.lower(),
+                                                                'learning_rate': learning_rate,
+                                                                'goal_focused': 'Yes' if goal else 'No',
+                                                                'is_double': 'Yes' if is_double else 'No',
+                                                                'enable_decay': 'Yes' if enable_decay else 'No',
+                                                                'epsilon': epsilon,
+                                                                'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                                'assign_priority': 'Yes' if assign_priority else 'No',
+                                                                'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                                'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                            }
+                                                            for key in result:
+                                                                new_row.update({key: result[key]})
 
-                                                        if is_observation_space_well_defined:
-                                                            new_row.update(
-                                                                {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                        results = results.append(new_row, ignore_index=True)
+                                                            if is_observation_space_well_defined:
+                                                                new_row.update(
+                                                                    {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                            results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -519,9 +545,9 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None, env_move_matri
                             '{0}_dueling_td_softmax.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'using_move_matrix', 'assign_priority',
-                   'is_double', 'algorithm_type', 'tau', 'num_time_steps_train', 'avg_score_train',
-                   'num_actions_blocked_train',
+                   'using_move_matrix', 'assign_priority', 'is_double', 'algorithm_type', 'tau',
+                   'enable_action_blocker', 'use_ml_for_action_blocker',
+                   'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test', 'num_actions_blocked_test', 'avg_loss']
 
     is_observation_space_well_defined = not is_observation_space_not_well_defined(env)
@@ -550,54 +576,58 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None, env_move_matri
                                             policy_args.update({'tau': tau})
                                             for using_move_matrix in list({False, env_move_matrix is not None}):
                                                 for assign_priority in [False, True]:
-                                                    if using_move_matrix:
-                                                        policy_args.update({'move_matrix': env_move_matrix})
-                                                    if normalize_state:
-                                                        env = NormalizedStates(env)
-                                                        if goal:
-                                                            goal = env.observation(goal)
-                                                    network_optimizer_args = {
-                                                        'learning_rate': learning_rate
-                                                    }
-                                                    network_args = {
-                                                        'fc_dims': hidden_layer_size
-                                                    }
-                                                    result = torch_rl.dueling_td.main.run(
-                                                        env=env, n_games=n_games, gamma=0.99,
-                                                        mem_size=1000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        enable_action_blocking=enable_action_blocker,
-                                                        min_penalty=penalty,
-                                                        goal=goal,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.SOFTMAX,
-                                                        policy_args=policy_args,
-                                                        assign_priority=assign_priority)
+                                                    for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                        if using_move_matrix:
+                                                            policy_args.update({'move_matrix': env_move_matrix})
+                                                        if normalize_state:
+                                                            env = NormalizedStates(env)
+                                                            if goal:
+                                                                goal = env.observation(goal)
+                                                        network_optimizer_args = {
+                                                            'learning_rate': learning_rate
+                                                        }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
+                                                        result = torch_rl.dueling_td.main.run(
+                                                            env=env, n_games=n_games, gamma=0.99,
+                                                            mem_size=1000,
+                                                            batch_size=batch_size,
+                                                            network_args=network_args,
+                                                            optimizer_type=optimizer_type,
+                                                            replace=1000,
+                                                            optimizer_args=network_optimizer_args,
+                                                            enable_action_blocking=enable_action_blocker,
+                                                            min_penalty=penalty,
+                                                            goal=goal,
+                                                            is_double=is_double,
+                                                            algorithm_type=algorithm_type,
+                                                            policy_type=PolicyType.SOFTMAX,
+                                                            policy_args=policy_args,
+                                                            assign_priority=assign_priority,
+                                                            use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                    new_row = {
-                                                        'batch_size': batch_size,
-                                                        'hidden_layer_size': hidden_layer_size,
-                                                        'algorithm_type': algorithm_type,
-                                                        'optimizer': optimizer_type.name.lower(),
-                                                        'learning_rate': learning_rate,
-                                                        'goal_focused': 'Yes' if goal else 'No',
-                                                        'is_double': 'Yes' if is_double else 'No',
-                                                        'tau': tau,
-                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                        'assign_priority': 'Yes' if assign_priority else 'No'
-                                                    }
-                                                    for key in result:
-                                                        new_row.update({key: result[key]})
+                                                        new_row = {
+                                                            'batch_size': batch_size,
+                                                            'hidden_layer_size': hidden_layer_size,
+                                                            'algorithm_type': algorithm_type,
+                                                            'optimizer': optimizer_type.name.lower(),
+                                                            'learning_rate': learning_rate,
+                                                            'goal_focused': 'Yes' if goal else 'No',
+                                                            'is_double': 'Yes' if is_double else 'No',
+                                                            'tau': tau,
+                                                            'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                            'assign_priority': 'Yes' if assign_priority else 'No',
+                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                            'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                        }
+                                                        for key in result:
+                                                            new_row.update({key: result[key]})
 
-                                                    if is_observation_space_well_defined:
-                                                        new_row.update(
-                                                            {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                    results = results.append(new_row, ignore_index=True)
+                                                        if is_observation_space_well_defined:
+                                                            new_row.update(
+                                                                {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -609,6 +639,7 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=No
                             '{0}_dueling_td_ucb.csv'.format(env_name))
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'using_move_matrix', 'assign_priority', 'is_double', 'algorithm_type',
+                   'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test', 'num_actions_blocked_test', 'avg_loss']
 
@@ -637,53 +668,57 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None, env_move_matrix=No
                                     for goal in list({None, env_goal}):
                                         for using_move_matrix in list({False, env_move_matrix is not None}):
                                             for assign_priority in [False, True]:
-                                                if using_move_matrix:
-                                                    policy_args.update({'move_matrix': env_move_matrix})
-                                                if normalize_state:
-                                                    env = NormalizedStates(env)
-                                                    if goal:
-                                                        goal = env.observation(goal)
-                                                network_optimizer_args = {
-                                                    'learning_rate': learning_rate
-                                                }
-                                                network_args = {
-                                                    'fc_dims': hidden_layer_size
-                                                }
-                                                result = torch_rl.dueling_td.main.run(
-                                                    env=env, n_games=n_games, gamma=0.99,
-                                                    mem_size=1000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    enable_action_blocking=enable_action_blocker,
-                                                    min_penalty=penalty,
-                                                    goal=goal,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.UCB,
-                                                    policy_args=policy_args,
-                                                    assign_priority=assign_priority)
+                                                for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                    if using_move_matrix:
+                                                        policy_args.update({'move_matrix': env_move_matrix})
+                                                    if normalize_state:
+                                                        env = NormalizedStates(env)
+                                                        if goal:
+                                                            goal = env.observation(goal)
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    result = torch_rl.dueling_td.main.run(
+                                                        env=env, n_games=n_games, gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.UCB,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                new_row = {
-                                                    'batch_size': batch_size,
-                                                    'hidden_layer_size': hidden_layer_size,
-                                                    'algorithm_type': algorithm_type,
-                                                    'optimizer': optimizer_type.name.lower(),
-                                                    'learning_rate': learning_rate,
-                                                    'goal_focused': 'Yes' if goal else 'No',
-                                                    'is_double': 'Yes' if is_double else 'No',
-                                                    'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                    'assign_priority': 'Yes' if assign_priority else 'No'
-                                                }
-                                                for key in result:
-                                                    new_row.update({key: result[key]})
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
 
-                                                if is_observation_space_well_defined:
-                                                    new_row.update(
-                                                        {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                results = results.append(new_row, ignore_index=True)
+                                                    if is_observation_space_well_defined:
+                                                        new_row.update(
+                                                            {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -696,6 +731,7 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_
                             '{0}_dueling_td_thompson_sampling.csv'.format(env_name))
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'using_move_matrix', 'assign_priority', 'is_double', 'algorithm_type',
+                   'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train',
                    'num_time_steps_test', 'avg_score_test', 'num_actions_blocked_test', 'avg_loss']
 
@@ -726,53 +762,57 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None, env_
                                     for goal in list({None, env_goal}):
                                         for using_move_matrix in list({False, env_move_matrix is not None}):
                                             for assign_priority in [False, True]:
-                                                if using_move_matrix:
-                                                    policy_args.update({'move_matrix': env_move_matrix})
-                                                if normalize_state:
-                                                    env = NormalizedStates(env)
-                                                    if goal:
-                                                        goal = env.observation(goal)
-                                                network_optimizer_args = {
-                                                    'learning_rate': learning_rate
-                                                }
-                                                network_args = {
-                                                    'fc_dims': hidden_layer_size
-                                                }
-                                                result = torch_rl.dueling_td.main.run(
-                                                    env=env, n_games=n_games, gamma=0.99,
-                                                    mem_size=1000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    enable_action_blocking=enable_action_blocker,
-                                                    min_penalty=penalty,
-                                                    goal=goal,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.THOMPSON_SAMPLING,
-                                                    policy_args=policy_args,
-                                                    assign_priority=assign_priority)
+                                                for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                    if using_move_matrix:
+                                                        policy_args.update({'move_matrix': env_move_matrix})
+                                                    if normalize_state:
+                                                        env = NormalizedStates(env)
+                                                        if goal:
+                                                            goal = env.observation(goal)
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    result = torch_rl.dueling_td.main.run(
+                                                        env=env, n_games=n_games, gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.THOMPSON_SAMPLING,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        use_ml_for_action_blocking=use_ml_for_action_blocker)
 
-                                                new_row = {
-                                                    'batch_size': batch_size,
-                                                    'hidden_layer_size': hidden_layer_size,
-                                                    'algorithm_type': algorithm_type,
-                                                    'optimizer': optimizer_type.name.lower(),
-                                                    'learning_rate': learning_rate,
-                                                    'goal_focused': 'Yes' if goal else 'No',
-                                                    'is_double': 'Yes' if is_double else 'No',
-                                                    'using_move_matrix': 'Yes' if using_move_matrix else 'No',
-                                                    'assign_priority': 'Yes' if assign_priority else 'No'
-                                                }
-                                                for key in result:
-                                                    new_row.update({key: result[key]})
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'using_move_matrix': 'Yes' if using_move_matrix else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
 
-                                                if is_observation_space_well_defined:
-                                                    new_row.update(
-                                                        {'normalize_state': 'Yes' if normalize_state else 'No'})
-                                                results = results.append(new_row, ignore_index=True)
+                                                    if is_observation_space_well_defined:
+                                                        new_row.update(
+                                                            {'normalize_state': 'Yes' if normalize_state else 'No'})
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -964,9 +1004,9 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, min_penalty=0, *
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_heuristic_dt.csv'.format(env_name))
 
-    result_cols = ['learning_type', 'use_model_only', 'enable_action_blocking', 'num_time_steps_train',
-                   'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
-                   'num_predicted_actions_chosen_train', 'num_time_steps_test',
+    result_cols = ['learning_type', 'use_model_only', 'enable_action_blocking', 'use_ml_for_action_blocker',
+                   'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train',
+                   'num_heuristic_actions_chosen_train', 'num_predicted_actions_chosen_train', 'num_time_steps_test',
                    'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
                    'num_predicted_actions_chosen_test']
 
@@ -975,20 +1015,23 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, min_penalty=0, *
     for learning_type in [LearningType.OFFLINE]:
         for use_model_only in [False, True]:
             for enable_action_blocking in list({False, min_penalty > 0}):
-                result = run_with_dt(env, n_games, learning_type, heuristic_func,
-                                     use_model_only, enable_action_blocking, min_penalty,
-                                     **args)
+                for use_ml_for_action_blocker in list({False, enable_action_blocking}):
+                    result = run_with_dt(env, n_games, learning_type, heuristic_func,
+                                         use_model_only, enable_action_blocking, min_penalty,
+                                         use_ml_for_action_blocker,
+                                         **args)
 
-                new_row = {
-                    'learning_type': learning_type.name,
-                    'use_model_only': 'Yes' if use_model_only else 'No',
-                    'enable_action_blocking': 'Yes' if enable_action_blocking else 'No'
-                }
+                    new_row = {
+                        'learning_type': learning_type.name,
+                        'use_model_only': 'Yes' if use_model_only else 'No',
+                        'enable_action_blocking': 'Yes' if enable_action_blocking else 'No',
+                        'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
+                    }
 
-                for key in result:
-                    new_row.update({key: result[key]})
+                    for key in result:
+                        new_row.update({key: result[key]})
 
-                results = results.append(new_row, ignore_index=True)
+                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, float_format='%.3f', index=False)
 
@@ -1000,10 +1043,9 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
                             '{0}_heuristic_td_epsilon_greedy.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
-                   'optimizer', 'learning_rate', 'goal_focused',
-                   'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
-                   'add_conservative_loss', 'alpha',
-                   'num_time_steps_train',
+                   'optimizer', 'learning_rate', 'goal_focused', 'is_double', 'algorithm_type', 'enable_decay',
+                   'epsilon_start', 'add_conservative_loss', 'alpha', 'enable_action_blocker',
+                   'use_ml_for_action_blocker', 'num_time_steps_train',
                    'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
                    'num_predicted_actions_chosen_train', 'num_time_steps_test',
                    'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
@@ -1031,8 +1073,100 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
                                                         epsilons = [1.0] if enable_decay \
                                                             else [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
                                                         for epsilon in epsilons:
-                                                            policy_args.update(
-                                                                {'eps_start': epsilon, 'enable_decay': enable_decay})
+                                                            for use_ml_for_action_blocker in list({False,
+                                                                                                   enable_action_blocker}):
+                                                                policy_args.update(
+                                                                    {'eps_start': epsilon, 'enable_decay': enable_decay})
+                                                                network_optimizer_args = {
+                                                                    'learning_rate': learning_rate
+                                                                }
+                                                                network_args = {
+                                                                    'fc_dims': hidden_layer_size
+                                                                }
+                                                                result = run_with_td(
+                                                                    env=env, n_games=n_games, gamma=0.99,
+                                                                    mem_size=1000000,
+                                                                    batch_size=batch_size,
+                                                                    network_args=network_args,
+                                                                    optimizer_type=optimizer_type,
+                                                                    replace=1000,
+                                                                    optimizer_args=network_optimizer_args,
+                                                                    enable_action_blocking=enable_action_blocker,
+                                                                    min_penalty=penalty,
+                                                                    goal=goal,
+                                                                    is_double=is_double,
+                                                                    algorithm_type=algorithm_type,
+                                                                    policy_type=PolicyType.EPSILON_GREEDY,
+                                                                    policy_args=policy_args,
+                                                                    use_model_only=use_model_only,
+                                                                    learning_type=learning_type,
+                                                                    heuristic_func=heuristic_func,
+                                                                    add_conservative_loss=add_conservative_loss,
+                                                                    alpha=alpha,
+                                                                    use_ml_for_action_blocking=use_ml_for_action_blocker,
+                                                                    **args)
+
+                                                                new_row = {
+                                                                    'batch_size': batch_size,
+                                                                    'hidden_layer_size': hidden_layer_size,
+                                                                    'algorithm_type': algorithm_type,
+                                                                    'optimizer': optimizer_type.name.lower(),
+                                                                    'learning_rate': learning_rate,
+                                                                    'goal_focused': 'Yes' if goal else 'No',
+                                                                    'is_double': 'Yes' if is_double else 'No',
+                                                                    'enable_decay': 'Yes' if enable_decay else 'No',
+                                                                    'epsilon': epsilon,
+                                                                    'learning_type': learning_type.name,
+                                                                    'use_model_only': 'Yes' if use_model_only else 'No',
+                                                                    'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                                    'alpha': alpha if add_conservative_loss else 0,
+                                                                    'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                                    'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
+                                                                }
+                                                                for key in result:
+                                                                    new_row.update({key: result[key]})
+
+                                                                results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, index=False, float_format='%.3f')
+
+
+def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
+    n_games = (500, 50)
+
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_heuristic_td_softmax.csv'.format(env_name))
+
+    result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
+                   'optimizer', 'learning_rate', 'goal_focused', 'is_double', 'algorithm_type', 'tau',
+                   'add_conservative_loss', 'alpha', 'enable_action_blocker', 'use_ml_for_action_blocker',
+                   'num_time_steps_train',
+                   'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
+                   'num_predicted_actions_chosen_train', 'num_time_steps_test',
+                   'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
+                   'num_predicted_actions_chosen_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    policy_args = {}
+    for learning_type in [LearningType.OFFLINE, LearningType.ONLINE, LearningType.BOTH]:
+        for use_model_only in [False, True]:
+            for is_double in [False, True]:
+                for algorithm_type in TDAlgorithmType.all():
+                    for enable_action_blocker in list({False, penalty > 0}):
+                        for batch_size in [32, 64, 128]:
+                            for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
+                                for learning_rate in [0.001, 0.0001]:
+                                    hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
+                                                          64, 128, 256, 512]
+                                    hidden_layer_sizes = list(set(hidden_layer_sizes))
+                                    for hidden_layer_size in hidden_layer_sizes:
+                                        for goal in list({None, env_goal}):
+                                            for add_conservative_loss in [False, True]:
+                                                for alpha in [0.001]:
+                                                    for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
+                                                        for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                            policy_args.update({'tau': tau})
                                                             network_optimizer_args = {
                                                                 'learning_rate': learning_rate
                                                             }
@@ -1052,13 +1186,14 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
                                                                 goal=goal,
                                                                 is_double=is_double,
                                                                 algorithm_type=algorithm_type,
-                                                                policy_type=PolicyType.EPSILON_GREEDY,
+                                                                policy_type=PolicyType.SOFTMAX,
                                                                 policy_args=policy_args,
-                                                                use_model_only=use_model_only,
-                                                                learning_type=learning_type,
                                                                 heuristic_func=heuristic_func,
+                                                                learning_type=learning_type,
                                                                 add_conservative_loss=add_conservative_loss,
                                                                 alpha=alpha,
+                                                                use_model_only=use_model_only,
+                                                                use_ml_for_action_blocking=use_ml_for_action_blocker,
                                                                 **args)
 
                                                             new_row = {
@@ -1069,12 +1204,13 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
                                                                 'learning_rate': learning_rate,
                                                                 'goal_focused': 'Yes' if goal else 'No',
                                                                 'is_double': 'Yes' if is_double else 'No',
-                                                                'enable_decay': 'Yes' if enable_decay else 'No',
-                                                                'epsilon': epsilon,
-                                                                'learning_type': learning_type.name,
+                                                                'tau': tau,
                                                                 'use_model_only': 'Yes' if use_model_only else 'No',
+                                                                'learning_type': learning_type.name,
                                                                 'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                                'alpha': alpha if add_conservative_loss else 0
+                                                                'alpha': alpha if add_conservative_loss else 0,
+                                                                'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                                'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
                                                             }
                                                             for key in result:
                                                                 new_row.update({key: result[key]})
@@ -1084,17 +1220,18 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
 
-def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
+def run_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
     n_games = (500, 50)
 
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_td_softmax.csv'.format(env_name))
+                            '{0}_heuristic_td_ucb.csv'.format(env_name))
+
+    policy_args = {'confidence_factor': 2}
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
-                   'is_double', 'algorithm_type', 'tau',
-                   'add_conservative_loss', 'alpha',
-                   'num_time_steps_train',
+                   'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
+                   'enable_action_blocker', 'use_ml_for_action_blocker', 'num_time_steps_train',
                    'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
                    'num_predicted_actions_chosen_train', 'num_time_steps_test',
                    'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
@@ -1102,7 +1239,6 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
 
     results = pd.DataFrame(columns=result_cols)
 
-    policy_args = {}
     for learning_type in [LearningType.OFFLINE, LearningType.ONLINE, LearningType.BOTH]:
         for use_model_only in [False, True]:
             for is_double in [False, True]:
@@ -1118,8 +1254,7 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
                                         for goal in list({None, env_goal}):
                                             for add_conservative_loss in [False, True]:
                                                 for alpha in [0.001]:
-                                                    for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
-                                                        policy_args.update({'tau': tau})
+                                                    for use_ml_for_action_blocker in list({False, enable_action_blocker}):
                                                         network_optimizer_args = {
                                                             'learning_rate': learning_rate
                                                         }
@@ -1139,13 +1274,14 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
                                                             goal=goal,
                                                             is_double=is_double,
                                                             algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.SOFTMAX,
+                                                            policy_type=PolicyType.UCB,
                                                             policy_args=policy_args,
-                                                            heuristic_func=heuristic_func,
                                                             learning_type=learning_type,
+                                                            use_model_only=use_model_only,
+                                                            heuristic_func=heuristic_func,
                                                             add_conservative_loss=add_conservative_loss,
-                                                            alpha=alpha,
-                                                            use_model_only=use_model_only, **args)
+                                                            use_ml_for_action_blocking=use_ml_for_action_blocker,
+                                                            alpha=alpha, **args)
 
                                                         new_row = {
                                                             'batch_size': batch_size,
@@ -1155,97 +1291,17 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
                                                             'learning_rate': learning_rate,
                                                             'goal_focused': 'Yes' if goal else 'No',
                                                             'is_double': 'Yes' if is_double else 'No',
-                                                            'tau': tau,
-                                                            'use_model_only': 'Yes' if use_model_only else 'No',
                                                             'learning_type': learning_type.name,
+                                                            'use_model_only': 'Yes' if use_model_only else 'No',
                                                             'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                            'alpha': alpha if add_conservative_loss else 0
+                                                            'alpha': alpha if add_conservative_loss else 0,
+                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                            'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
                                                         }
                                                         for key in result:
                                                             new_row.update({key: result[key]})
 
                                                         results = results.append(new_row, ignore_index=True)
-
-    results.to_csv(csv_file, index=False, float_format='%.3f')
-
-
-def run_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
-    n_games = (500, 50)
-
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_td_ucb.csv'.format(env_name))
-
-    policy_args = {'confidence_factor': 2}
-
-    result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
-                   'optimizer', 'learning_rate', 'goal_focused',
-                   'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha', 'num_time_steps_train',
-                   'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
-                   'num_predicted_actions_chosen_train', 'num_time_steps_test',
-                   'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
-                   'num_predicted_actions_chosen_test']
-
-    results = pd.DataFrame(columns=result_cols)
-
-    for learning_type in [LearningType.OFFLINE, LearningType.ONLINE, LearningType.BOTH]:
-        for use_model_only in [False, True]:
-            for is_double in [False, True]:
-                for algorithm_type in TDAlgorithmType.all():
-                    for enable_action_blocker in list({False, penalty > 0}):
-                        for batch_size in [32, 64, 128]:
-                            for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                                for learning_rate in [0.001, 0.0001]:
-                                    hidden_layer_sizes = [derive_hidden_layer_size(env, batch_size),
-                                                          64, 128, 256, 512]
-                                    hidden_layer_sizes = list(set(hidden_layer_sizes))
-                                    for hidden_layer_size in hidden_layer_sizes:
-                                        for goal in list({None, env_goal}):
-                                            for add_conservative_loss in [False, True]:
-                                                for alpha in [0.001]:
-                                                    network_optimizer_args = {
-                                                        'learning_rate': learning_rate
-                                                    }
-                                                    network_args = {
-                                                        'fc_dims': hidden_layer_size
-                                                    }
-                                                    result = run_with_td(
-                                                        env=env, n_games=n_games, gamma=0.99,
-                                                        mem_size=1000000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        enable_action_blocking=enable_action_blocker,
-                                                        min_penalty=penalty,
-                                                        goal=goal,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.UCB,
-                                                        policy_args=policy_args,
-                                                        learning_type=learning_type,
-                                                        use_model_only=use_model_only,
-                                                        heuristic_func=heuristic_func,
-                                                        add_conservative_loss=add_conservative_loss,
-                                                        alpha=alpha, **args)
-
-                                                    new_row = {
-                                                        'batch_size': batch_size,
-                                                        'hidden_layer_size': hidden_layer_size,
-                                                        'algorithm_type': algorithm_type,
-                                                        'optimizer': optimizer_type.name.lower(),
-                                                        'learning_rate': learning_rate,
-                                                        'goal_focused': 'Yes' if goal else 'No',
-                                                        'is_double': 'Yes' if is_double else 'No',
-                                                        'learning_type': learning_type.name,
-                                                        'use_model_only': 'Yes' if use_model_only else 'No',
-                                                        'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                        'alpha': alpha if add_conservative_loss else 0
-                                                    }
-                                                    for key in result:
-                                                        new_row.update({key: result[key]})
-
-                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1260,7 +1316,7 @@ def run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
                    'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
-                   'num_time_steps_train',
+                   'enable_action_blocker', 'use_ml_for_action_blocker', 'num_time_steps_train',
                    'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
                    'num_predicted_actions_chosen_train', 'num_time_steps_test',
                    'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
@@ -1284,50 +1340,54 @@ def run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, 
                                         for goal in list({None, env_goal}):
                                             for add_conservative_loss in [False, True]:
                                                 for alpha in [0.001]:
-                                                    network_optimizer_args = {
-                                                        'learning_rate': learning_rate
-                                                    }
-                                                    network_args = {
-                                                        'fc_dims': hidden_layer_size
-                                                    }
-                                                    result = run_with_td(
-                                                        env=env, n_games=n_games, gamma=0.99,
-                                                        mem_size=1000000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        enable_action_blocking=enable_action_blocker,
-                                                        min_penalty=penalty,
-                                                        goal=goal,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.THOMPSON_SAMPLING,
-                                                        policy_args=policy_args,
-                                                        learning_type=learning_type,
-                                                        use_model_only=use_model_only,
-                                                        heuristic_func=heuristic_func,
-                                                        add_conservative_loss=add_conservative_loss,
-                                                        alpha=alpha, **args)
+                                                    for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                        network_optimizer_args = {
+                                                            'learning_rate': learning_rate
+                                                        }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
+                                                        result = run_with_td(
+                                                            env=env, n_games=n_games, gamma=0.99,
+                                                            mem_size=1000000,
+                                                            batch_size=batch_size,
+                                                            network_args=network_args,
+                                                            optimizer_type=optimizer_type,
+                                                            replace=1000,
+                                                            optimizer_args=network_optimizer_args,
+                                                            enable_action_blocking=enable_action_blocker,
+                                                            min_penalty=penalty,
+                                                            goal=goal,
+                                                            is_double=is_double,
+                                                            algorithm_type=algorithm_type,
+                                                            policy_type=PolicyType.THOMPSON_SAMPLING,
+                                                            policy_args=policy_args,
+                                                            learning_type=learning_type,
+                                                            use_model_only=use_model_only,
+                                                            heuristic_func=heuristic_func,
+                                                            add_conservative_loss=add_conservative_loss,
+                                                            use_ml_for_action_blocking=use_ml_for_action_blocker,
+                                                            alpha=alpha, **args)
 
-                                                    new_row = {
-                                                        'batch_size': batch_size,
-                                                        'hidden_layer_size': hidden_layer_size,
-                                                        'algorithm_type': algorithm_type,
-                                                        'optimizer': optimizer_type.name.lower(),
-                                                        'learning_rate': learning_rate,
-                                                        'goal_focused': 'Yes' if goal else 'No',
-                                                        'is_double': 'Yes' if is_double else 'No',
-                                                        'learning_type': learning_type.name,
-                                                        'use_model_only': 'Yes' if use_model_only else 'No',
-                                                        'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                        'alpha': alpha if add_conservative_loss else 0
-                                                    }
-                                                    for key in result:
-                                                        new_row.update({key: result[key]})
+                                                        new_row = {
+                                                            'batch_size': batch_size,
+                                                            'hidden_layer_size': hidden_layer_size,
+                                                            'algorithm_type': algorithm_type,
+                                                            'optimizer': optimizer_type.name.lower(),
+                                                            'learning_rate': learning_rate,
+                                                            'goal_focused': 'Yes' if goal else 'No',
+                                                            'is_double': 'Yes' if is_double else 'No',
+                                                            'learning_type': learning_type.name,
+                                                            'use_model_only': 'Yes' if use_model_only else 'No',
+                                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                            'alpha': alpha if add_conservative_loss else 0,
+                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                            'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
+                                                        }
+                                                        for key in result:
+                                                            new_row.update({key: result[key]})
 
-                                                    results = results.append(new_row, ignore_index=True)
+                                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1341,7 +1401,7 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, pena
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
                    'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
-                   'add_conservative_loss', 'alpha',
+                   'add_conservative_loss', 'alpha', 'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_train',
                    'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
                    'num_predicted_actions_chosen_train', 'num_time_steps_test',
@@ -1370,54 +1430,58 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, pena
                                                         epsilons = [1.0] if enable_decay \
                                                             else [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
                                                         for epsilon in epsilons:
-                                                            policy_args.update(
-                                                                {'eps_start': epsilon, 'enable_decay': enable_decay})
-                                                            network_optimizer_args = {
-                                                                'learning_rate': learning_rate
-                                                            }
-                                                            network_args = {
-                                                                'fc_dims': hidden_layer_size
-                                                            }
-                                                            result = run_with_dueling_td(
-                                                                env=env, n_games=n_games, gamma=0.99,
-                                                                mem_size=1000000,
-                                                                batch_size=batch_size,
-                                                                network_args=network_args,
-                                                                optimizer_type=optimizer_type,
-                                                                replace=1000,
-                                                                optimizer_args=network_optimizer_args,
-                                                                enable_action_blocking=enable_action_blocker,
-                                                                min_penalty=penalty,
-                                                                goal=goal,
-                                                                is_double=is_double,
-                                                                algorithm_type=algorithm_type,
-                                                                policy_type=PolicyType.EPSILON_GREEDY,
-                                                                policy_args=policy_args,
-                                                                use_model_only=use_model_only,
-                                                                learning_type=learning_type,
-                                                                heuristic_func=heuristic_func,
-                                                                add_conservative_loss=add_conservative_loss,
-                                                                alpha=alpha, **args)
+                                                            for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                                policy_args.update(
+                                                                    {'eps_start': epsilon, 'enable_decay': enable_decay})
+                                                                network_optimizer_args = {
+                                                                    'learning_rate': learning_rate
+                                                                }
+                                                                network_args = {
+                                                                    'fc_dims': hidden_layer_size
+                                                                }
+                                                                result = run_with_dueling_td(
+                                                                    env=env, n_games=n_games, gamma=0.99,
+                                                                    mem_size=1000000,
+                                                                    batch_size=batch_size,
+                                                                    network_args=network_args,
+                                                                    optimizer_type=optimizer_type,
+                                                                    replace=1000,
+                                                                    optimizer_args=network_optimizer_args,
+                                                                    enable_action_blocking=enable_action_blocker,
+                                                                    min_penalty=penalty,
+                                                                    goal=goal,
+                                                                    is_double=is_double,
+                                                                    algorithm_type=algorithm_type,
+                                                                    policy_type=PolicyType.EPSILON_GREEDY,
+                                                                    policy_args=policy_args,
+                                                                    use_model_only=use_model_only,
+                                                                    learning_type=learning_type,
+                                                                    heuristic_func=heuristic_func,
+                                                                    add_conservative_loss=add_conservative_loss,
+                                                                    use_ml_for_action_blocking=use_ml_for_action_blocker,
+                                                                    alpha=alpha, **args)
 
-                                                            new_row = {
-                                                                'batch_size': batch_size,
-                                                                'hidden_layer_size': hidden_layer_size,
-                                                                'algorithm_type': algorithm_type,
-                                                                'optimizer': optimizer_type.name.lower(),
-                                                                'learning_rate': learning_rate,
-                                                                'goal_focused': 'Yes' if goal else 'No',
-                                                                'is_double': 'Yes' if is_double else 'No',
-                                                                'enable_decay': 'Yes' if enable_decay else 'No',
-                                                                'epsilon': epsilon,
-                                                                'learning_type': learning_type.name,
-                                                                'use_model_only': 'Yes' if use_model_only else 'No',
-                                                                'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                                'alpha': alpha if add_conservative_loss else 0
-                                                            }
-                                                            for key in result:
-                                                                new_row.update({key: result[key]})
+                                                                new_row = {
+                                                                    'batch_size': batch_size,
+                                                                    'hidden_layer_size': hidden_layer_size,
+                                                                    'algorithm_type': algorithm_type,
+                                                                    'optimizer': optimizer_type.name.lower(),
+                                                                    'learning_rate': learning_rate,
+                                                                    'goal_focused': 'Yes' if goal else 'No',
+                                                                    'is_double': 'Yes' if is_double else 'No',
+                                                                    'enable_decay': 'Yes' if enable_decay else 'No',
+                                                                    'epsilon': epsilon,
+                                                                    'learning_type': learning_type.name,
+                                                                    'use_model_only': 'Yes' if use_model_only else 'No',
+                                                                    'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                                    'alpha': alpha if add_conservative_loss else 0,
+                                                                    'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                                    'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
+                                                                }
+                                                                for key in result:
+                                                                    new_row.update({key: result[key]})
 
-                                                            results = results.append(new_row, ignore_index=True)
+                                                                results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1429,9 +1493,8 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, en
                             '{0}_heuristic_dueling_td_softmax.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
-                   'optimizer', 'learning_rate', 'goal_focused',
-                   'is_double', 'algorithm_type', 'tau',
-                   'add_conservative_loss', 'alpha',
+                   'optimizer', 'learning_rate', 'goal_focused', 'is_double', 'algorithm_type', 'tau',
+                   'add_conservative_loss', 'alpha', 'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_train',
                    'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
                    'num_predicted_actions_chosen_train', 'num_time_steps_test',
@@ -1457,52 +1520,56 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, en
                                             for add_conservative_loss in [False, True]:
                                                 for alpha in [0.001]:
                                                     for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
-                                                        policy_args.update({'tau': tau})
-                                                        network_optimizer_args = {
-                                                            'learning_rate': learning_rate
-                                                        }
-                                                        network_args = {
-                                                            'fc_dims': hidden_layer_size
-                                                        }
-                                                        result = run_with_dueling_td(
-                                                            env=env, n_games=n_games, gamma=0.99,
-                                                            mem_size=1000000,
-                                                            batch_size=batch_size,
-                                                            network_args=network_args,
-                                                            optimizer_type=optimizer_type,
-                                                            replace=1000,
-                                                            optimizer_args=network_optimizer_args,
-                                                            enable_action_blocking=enable_action_blocker,
-                                                            min_penalty=penalty,
-                                                            goal=goal,
-                                                            is_double=is_double,
-                                                            algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.SOFTMAX,
-                                                            policy_args=policy_args,
-                                                            heuristic_func=heuristic_func,
-                                                            learning_type=learning_type,
-                                                            add_conservative_loss=add_conservative_loss,
-                                                            alpha=alpha,
-                                                            use_model_only=use_model_only, **args)
+                                                        for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                            policy_args.update({'tau': tau})
+                                                            network_optimizer_args = {
+                                                                'learning_rate': learning_rate
+                                                            }
+                                                            network_args = {
+                                                                'fc_dims': hidden_layer_size
+                                                            }
+                                                            result = run_with_dueling_td(
+                                                                env=env, n_games=n_games, gamma=0.99,
+                                                                mem_size=1000000,
+                                                                batch_size=batch_size,
+                                                                network_args=network_args,
+                                                                optimizer_type=optimizer_type,
+                                                                replace=1000,
+                                                                optimizer_args=network_optimizer_args,
+                                                                enable_action_blocking=enable_action_blocker,
+                                                                min_penalty=penalty,
+                                                                goal=goal,
+                                                                is_double=is_double,
+                                                                algorithm_type=algorithm_type,
+                                                                policy_type=PolicyType.SOFTMAX,
+                                                                policy_args=policy_args,
+                                                                heuristic_func=heuristic_func,
+                                                                learning_type=learning_type,
+                                                                add_conservative_loss=add_conservative_loss,
+                                                                alpha=alpha,
+                                                                use_ml_for_action_blocking=use_ml_for_action_blocker,
+                                                                use_model_only=use_model_only, **args)
 
-                                                        new_row = {
-                                                            'batch_size': batch_size,
-                                                            'hidden_layer_size': hidden_layer_size,
-                                                            'algorithm_type': algorithm_type,
-                                                            'optimizer': optimizer_type.name.lower(),
-                                                            'learning_rate': learning_rate,
-                                                            'goal_focused': 'Yes' if goal else 'No',
-                                                            'is_double': 'Yes' if is_double else 'No',
-                                                            'tau': tau,
-                                                            'use_model_only': 'Yes' if use_model_only else 'No',
-                                                            'learning_type': learning_type.name,
-                                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                            'alpha': alpha if add_conservative_loss else 0
-                                                        }
-                                                        for key in result:
-                                                            new_row.update({key: result[key]})
+                                                            new_row = {
+                                                                'batch_size': batch_size,
+                                                                'hidden_layer_size': hidden_layer_size,
+                                                                'algorithm_type': algorithm_type,
+                                                                'optimizer': optimizer_type.name.lower(),
+                                                                'learning_rate': learning_rate,
+                                                                'goal_focused': 'Yes' if goal else 'No',
+                                                                'is_double': 'Yes' if is_double else 'No',
+                                                                'tau': tau,
+                                                                'use_model_only': 'Yes' if use_model_only else 'No',
+                                                                'learning_type': learning_type.name,
+                                                                'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                                'alpha': alpha if add_conservative_loss else 0,
+                                                                'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                                'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
+                                                            }
+                                                            for key in result:
+                                                                new_row.update({key: result[key]})
 
-                                                        results = results.append(new_row, ignore_index=True)
+                                                            results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1517,7 +1584,8 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_go
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
-                   'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha', 'num_time_steps_train',
+                   'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
+                   'enable_action_blocker', 'use_ml_for_action_blocker', 'num_time_steps_train',
                    'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
                    'num_predicted_actions_chosen_train', 'num_time_steps_test',
                    'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
@@ -1540,50 +1608,54 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_go
                                         for goal in list({None, env_goal}):
                                             for add_conservative_loss in [False, True]:
                                                 for alpha in [0.001]:
-                                                    network_optimizer_args = {
-                                                        'learning_rate': learning_rate
-                                                    }
-                                                    network_args = {
-                                                        'fc_dims': hidden_layer_size
-                                                    }
-                                                    result = run_with_dueling_td(
-                                                        env=env, n_games=n_games, gamma=0.99,
-                                                        mem_size=1000000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        enable_action_blocking=enable_action_blocker,
-                                                        min_penalty=penalty,
-                                                        goal=goal,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.UCB,
-                                                        policy_args=policy_args,
-                                                        learning_type=learning_type,
-                                                        use_model_only=use_model_only,
-                                                        heuristic_func=heuristic_func,
-                                                        add_conservative_loss=add_conservative_loss,
-                                                        alpha=alpha, **args)
+                                                    for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                        network_optimizer_args = {
+                                                            'learning_rate': learning_rate
+                                                        }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
+                                                        result = run_with_dueling_td(
+                                                            env=env, n_games=n_games, gamma=0.99,
+                                                            mem_size=1000000,
+                                                            batch_size=batch_size,
+                                                            network_args=network_args,
+                                                            optimizer_type=optimizer_type,
+                                                            replace=1000,
+                                                            optimizer_args=network_optimizer_args,
+                                                            enable_action_blocking=enable_action_blocker,
+                                                            min_penalty=penalty,
+                                                            goal=goal,
+                                                            is_double=is_double,
+                                                            algorithm_type=algorithm_type,
+                                                            policy_type=PolicyType.UCB,
+                                                            policy_args=policy_args,
+                                                            learning_type=learning_type,
+                                                            use_model_only=use_model_only,
+                                                            heuristic_func=heuristic_func,
+                                                            add_conservative_loss=add_conservative_loss,
+                                                            use_ml_for_action_blocking=use_ml_for_action_blocker,
+                                                            alpha=alpha, **args)
 
-                                                    new_row = {
-                                                        'batch_size': batch_size,
-                                                        'hidden_layer_size': hidden_layer_size,
-                                                        'algorithm_type': algorithm_type,
-                                                        'optimizer': optimizer_type.name.lower(),
-                                                        'learning_rate': learning_rate,
-                                                        'goal_focused': 'Yes' if goal else 'No',
-                                                        'is_double': 'Yes' if is_double else 'No',
-                                                        'learning_type': learning_type.name,
-                                                        'use_model_only': 'Yes' if use_model_only else 'No',
-                                                        'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                        'alpha': alpha if add_conservative_loss else 0
-                                                    }
-                                                    for key in result:
-                                                        new_row.update({key: result[key]})
+                                                        new_row = {
+                                                            'batch_size': batch_size,
+                                                            'hidden_layer_size': hidden_layer_size,
+                                                            'algorithm_type': algorithm_type,
+                                                            'optimizer': optimizer_type.name.lower(),
+                                                            'learning_rate': learning_rate,
+                                                            'goal_focused': 'Yes' if goal else 'No',
+                                                            'is_double': 'Yes' if is_double else 'No',
+                                                            'learning_type': learning_type.name,
+                                                            'use_model_only': 'Yes' if use_model_only else 'No',
+                                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                            'alpha': alpha if add_conservative_loss else 0,
+                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                            'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
+                                                        }
+                                                        for key in result:
+                                                            new_row.update({key: result[key]})
 
-                                                    results = results.append(new_row, ignore_index=True)
+                                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1598,7 +1670,7 @@ def run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, p
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
                    'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
-                   'num_time_steps_train',
+                   'enable_action_blocker', 'use_ml_for_action_blocker', 'num_time_steps_train',
                    'avg_score_train', 'num_actions_blocked_train', 'num_heuristic_actions_chosen_train',
                    'num_predicted_actions_chosen_train', 'num_time_steps_test',
                    'avg_score_test', 'num_actions_blocked_test', 'num_heuristic_actions_chosen_test',
@@ -1622,50 +1694,54 @@ def run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, p
                                         for goal in list({None, env_goal}):
                                             for add_conservative_loss in [False, True]:
                                                 for alpha in [0.001]:
-                                                    network_optimizer_args = {
-                                                        'learning_rate': learning_rate
-                                                    }
-                                                    network_args = {
-                                                        'fc_dims': hidden_layer_size
-                                                    }
-                                                    result = run_with_dueling_td(
-                                                        env=env, n_games=n_games, gamma=0.99,
-                                                        mem_size=1000000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        enable_action_blocking=enable_action_blocker,
-                                                        min_penalty=penalty,
-                                                        goal=goal,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.THOMPSON_SAMPLING,
-                                                        policy_args=policy_args,
-                                                        learning_type=learning_type,
-                                                        use_model_only=use_model_only,
-                                                        heuristic_func=heuristic_func,
-                                                        add_conservative_loss=add_conservative_loss,
-                                                        alpha=alpha, **args)
+                                                    for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                                        network_optimizer_args = {
+                                                            'learning_rate': learning_rate
+                                                        }
+                                                        network_args = {
+                                                            'fc_dims': hidden_layer_size
+                                                        }
+                                                        result = run_with_dueling_td(
+                                                            env=env, n_games=n_games, gamma=0.99,
+                                                            mem_size=1000000,
+                                                            batch_size=batch_size,
+                                                            network_args=network_args,
+                                                            optimizer_type=optimizer_type,
+                                                            replace=1000,
+                                                            optimizer_args=network_optimizer_args,
+                                                            enable_action_blocking=enable_action_blocker,
+                                                            min_penalty=penalty,
+                                                            goal=goal,
+                                                            is_double=is_double,
+                                                            algorithm_type=algorithm_type,
+                                                            policy_type=PolicyType.THOMPSON_SAMPLING,
+                                                            policy_args=policy_args,
+                                                            learning_type=learning_type,
+                                                            use_model_only=use_model_only,
+                                                            heuristic_func=heuristic_func,
+                                                            add_conservative_loss=add_conservative_loss,
+                                                            use_ml_for_action_blocking=use_ml_for_action_blocker,
+                                                            alpha=alpha, **args)
 
-                                                    new_row = {
-                                                        'batch_size': batch_size,
-                                                        'hidden_layer_size': hidden_layer_size,
-                                                        'algorithm_type': algorithm_type,
-                                                        'optimizer': optimizer_type.name.lower(),
-                                                        'learning_rate': learning_rate,
-                                                        'goal_focused': 'Yes' if goal else 'No',
-                                                        'is_double': 'Yes' if is_double else 'No',
-                                                        'learning_type': learning_type.name,
-                                                        'use_model_only': 'Yes' if use_model_only else 'No',
-                                                        'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                        'alpha': alpha if add_conservative_loss else 0
-                                                    }
-                                                    for key in result:
-                                                        new_row.update({key: result[key]})
+                                                        new_row = {
+                                                            'batch_size': batch_size,
+                                                            'hidden_layer_size': hidden_layer_size,
+                                                            'algorithm_type': algorithm_type,
+                                                            'optimizer': optimizer_type.name.lower(),
+                                                            'learning_rate': learning_rate,
+                                                            'goal_focused': 'Yes' if goal else 'No',
+                                                            'is_double': 'Yes' if is_double else 'No',
+                                                            'learning_type': learning_type.name,
+                                                            'use_model_only': 'Yes' if use_model_only else 'No',
+                                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                            'alpha': alpha if add_conservative_loss else 0,
+                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                            'use_ml_for_action_blocker': 'Yes' if use_ml_for_action_blocker else 'No',
+                                                        }
+                                                        for key in result:
+                                                            new_row.update({key: result[key]})
 
-                                                    results = results.append(new_row, ignore_index=True)
+                                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
