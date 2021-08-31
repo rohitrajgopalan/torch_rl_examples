@@ -5,6 +5,6 @@ This repository demonstrates how we can apply the TorchRL library to solve some 
 Before running these examples, <a href="https://github.com/rohitrajgopalan/torch_rl">download the TorchRL repository</a> and do the following:
 1. Navigate to the root of the torch_rl directory on your local machine on the terminal<br />
 2. Run python setup.py sdist <br />
-3. Run python -m pip install dist/torch-rl-14.0.tar.gz <br />
+3. Run python -m pip install dist/torch-rl-15.0.tar.gz <br />
   
 The environments I have used here are Cartpole, Blackjack, Lunar Lander (continuous and discrete), Mountain Car (continuous and discrete), Bipedal Walker and Gym-CCC's MultiRotor (which I have made my own copy for it to work with the TorchRL library). 
