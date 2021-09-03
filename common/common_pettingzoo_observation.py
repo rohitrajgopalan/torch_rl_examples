@@ -1,9 +1,9 @@
 import os
 
 import pandas as pd
-from torch_rl.td.agent import TDAgent
 from torch_rl.dueling_td.agent import DuelingTDAgent
-from torch_rl.utils.types import NetworkOptimizer, TDAlgorithmType, PolicyType, LearningType
+from torch_rl.td.agent import TDAgent
+from torch_rl.utils.types import NetworkOptimizer, TDAlgorithmType, PolicyType
 
 from petting_zoo.random_legal import RandomLegal
 
@@ -54,8 +54,8 @@ def run_td_epsilon_greedy(env, env_name, penalty):
                                                     'fc_dims': hidden_layer_size
                                                 }
                                                 agent = TDAgent(
-                                                    input_dims=env.observation_space.shape,
-                                                    action_space=env.action_space,
+                                                    input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                                    action_space=env.action_spaces[env.possible_agents[0]],
                                                     gamma=0.99,
                                                     mem_size=1000,
                                                     batch_size=batch_size,
@@ -133,8 +133,8 @@ def run_td_softmax(env, env_name, penalty):
                                                 'fc_dims': hidden_layer_size
                                             }
                                             agent = TDAgent(
-                                                input_dims=env.observation_space.shape,
-                                                action_space=env.action_space,
+                                                input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                                action_space=env.action_spaces[env.possible_agents[0]],
                                                 gamma=0.99,
                                                 mem_size=1000,
                                                 batch_size=batch_size,
@@ -210,8 +210,8 @@ def run_td_ucb(env, env_name, penalty):
                                             'fc_dims': hidden_layer_size
                                         }
                                         agent = TDAgent(
-                                            input_dims=env.observation_space.shape,
-                                            action_space=env.action_space,
+                                            input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                            action_space=env.action_spaces[env.possible_agents[0]],
                                             gamma=0.99,
                                             mem_size=1000,
                                             batch_size=batch_size,
@@ -290,8 +290,8 @@ def run_td_thompson_sampling(env, env_name, penalty):
                                             'fc_dims': hidden_layer_size
                                         }
                                         agent = TDAgent(
-                                            input_dims=env.observation_space.shape,
-                                            action_space=env.action_space,
+                                            input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                            action_space=env.action_spaces[env.possible_agents[0]],
                                             gamma=0.99,
                                             mem_size=1000,
                                             batch_size=batch_size,
@@ -372,8 +372,8 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty):
                                                     'fc_dims': hidden_layer_size
                                                 }
                                                 agent = DuelingTDAgent(
-                                                    input_dims=env.observation_space.shape,
-                                                    action_space=env.action_space,
+                                                    input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                                    action_space=env.action_spaces[env.possible_agents[0]],
                                                     gamma=0.99,
                                                     mem_size=1000,
                                                     batch_size=batch_size,
@@ -454,8 +454,8 @@ def run_dueling_td_softmax(env, env_name, penalty):
                                                 'fc_dims': hidden_layer_size
                                             }
                                             agent = DuelingTDAgent(
-                                                input_dims=env.observation_space.shape,
-                                                action_space=env.action_space,
+                                                input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                                action_space=env.action_spaces[env.possible_agents[0]],
                                                 gamma=0.99,
                                                 mem_size=1000,
                                                 batch_size=batch_size,
@@ -530,8 +530,8 @@ def run_dueling_td_ucb(env, env_name, penalty):
                                             'fc_dims': hidden_layer_size
                                         }
                                         agent = DuelingTDAgent(
-                                            input_dims=env.observation_space.shape,
-                                            action_space=env.action_space,
+                                            input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                            action_space=env.action_spaces[env.possible_agents[0]],
                                             gamma=0.99,
                                             mem_size=1000,
                                             batch_size=batch_size,
@@ -610,8 +610,8 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty):
                                             'fc_dims': hidden_layer_size
                                         }
                                         agent = DuelingTDAgent(
-                                            input_dims=env.observation_space.shape,
-                                            action_space=env.action_space,
+                                            input_dims=env.observation_spaces[env.possible_agents[0]].shape,
+                                            action_space=env.action_spaces[env.possible_agents[0]],
                                             gamma=0.99,
                                             mem_size=1000,
                                             batch_size=batch_size,

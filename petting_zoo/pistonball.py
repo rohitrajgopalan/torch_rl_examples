@@ -16,12 +16,7 @@ from torch_rl.ddpg.agent import DDPGAgent
 from torch_rl.td3.agent import TD3Agent
 from torch_rl.utils.types import NetworkOptimizer, TDAlgorithmType, PolicyType, LearningType
 
-try:
-    from common.run import run_pettingzoo_env
-    from common.utils import generate_agents_for_petting_zoo
-except ImportError:
-    from common.run import run_pettingzoo_env
-    from common.utils import generate_agents_for_petting_zoo
+from common.run import run_pettingzoo_env
 
 
 def run_td_epsilon_greedy(env, env_name):
@@ -56,23 +51,25 @@ def run_td_epsilon_greedy(env, env_name):
                                     network_optimizer_args = {
                                         'learning_rate': learning_rate
                                     }
-                                    agent = TDAgent(
-                                        input_dims=env.observation_space.shape,
-                                        action_space=env.action_space,
-                                        gamma=0.99,
-                                        mem_size=1000,
-                                        batch_size=batch_size,
-                                        network_args=network_args,
-                                        optimizer_type=optimizer_type,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        is_double=is_double,
-                                        algorithm_type=algorithm_type,
-                                        policy_type=PolicyType.EPSILON_GREEDY,
-                                        policy_args=policy_args,
-                                        assign_priority=assign_priority)
+                                    agents = {}
 
-                                    agents = generate_agents_for_petting_zoo(env, agent)
+                                    for agent_id in env.possible_agents:
+                                        agents.update({agent_id: TDAgent(
+                                            input_dims=env.observation_spaces[agent_id].shape,
+                                            action_space=env.action_spaces[agent_id],
+                                            gamma=0.99,
+                                            mem_size=1000,
+                                            batch_size=batch_size,
+                                            network_args=network_args,
+                                            optimizer_type=optimizer_type,
+                                            replace=1000,
+                                            optimizer_args=network_optimizer_args,
+                                            is_double=is_double,
+                                            algorithm_type=algorithm_type,
+                                            policy_type=PolicyType.EPSILON_GREEDY,
+                                            policy_args=policy_args,
+                                            assign_priority=assign_priority)
+                                        })
 
                                     result = run_pettingzoo_env(env, agents, n_games_train=500,
                                                                 n_games_test=50)
@@ -123,23 +120,24 @@ def run_td_softmax(env, env_name):
                                 network_optimizer_args = {
                                     'learning_rate': learning_rate
                                 }
-                                agent = TDAgent(
-                                    input_dims=env.observation_space.shape,
-                                    action_space=env.action_space,
-                                    gamma=0.99,
-                                    mem_size=1000,
-                                    batch_size=batch_size,
-                                    network_args=network_args,
-                                    optimizer_type=optimizer_type,
-                                    replace=1000,
-                                    optimizer_args=network_optimizer_args,
-                                    is_double=is_double,
-                                    algorithm_type=algorithm_type,
-                                    policy_type=PolicyType.SOFTMAX,
-                                    policy_args=policy_args,
-                                    assign_priority=assign_priority)
+                                agents = {}
 
-                                agents = generate_agents_for_petting_zoo(env, agent)
+                                for agent_id in env.possible_agents:
+                                    agents.update({agent_id: TDAgent(
+                                        input_dims=env.observation_spaces[agent_id].shape,
+                                        action_space=env.action_spaces[agent_id],
+                                        gamma=0.99,
+                                        mem_size=1000,
+                                        batch_size=batch_size,
+                                        network_args=network_args,
+                                        optimizer_type=optimizer_type,
+                                        replace=1000,
+                                        optimizer_args=network_optimizer_args,
+                                        is_double=is_double,
+                                        algorithm_type=algorithm_type,
+                                        policy_type=PolicyType.SOFTMAX,
+                                        policy_args=policy_args,
+                                        assign_priority=assign_priority)})
 
                                 result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
@@ -185,23 +183,24 @@ def run_td_ucb(env, env_name):
                             network_optimizer_args = {
                                 'learning_rate': learning_rate
                             }
-                            agent = TDAgent(
-                                input_dims=env.observation_space.shape,
-                                action_space=env.action_space,
-                                gamma=0.99,
-                                mem_size=1000,
-                                batch_size=batch_size,
-                                network_args=network_args,
-                                optimizer_type=optimizer_type,
-                                replace=1000,
-                                optimizer_args=network_optimizer_args,
-                                is_double=is_double,
-                                algorithm_type=algorithm_type,
-                                policy_type=PolicyType.UCB,
-                                policy_args=policy_args,
-                                assign_priority=assign_priority)
+                            agents = {}
 
-                            agents = generate_agents_for_petting_zoo(env, agent)
+                            for agent_id in env.possible_agents:
+                                agents.update({agent_id: TDAgent(
+                                    input_dims=env.observation_spaces[agent_id].shape,
+                                    action_space=env.action_spaces[agent_id],
+                                    gamma=0.99,
+                                    mem_size=1000,
+                                    batch_size=batch_size,
+                                    network_args=network_args,
+                                    optimizer_type=optimizer_type,
+                                    replace=1000,
+                                    optimizer_args=network_optimizer_args,
+                                    is_double=is_double,
+                                    algorithm_type=algorithm_type,
+                                    policy_type=PolicyType.UCB,
+                                    policy_args=policy_args,
+                                    assign_priority=assign_priority)})
 
                             result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
@@ -253,23 +252,24 @@ def run_dueling_td_epsilon_greedy(env, env_name):
                                     network_optimizer_args = {
                                         'learning_rate': learning_rate
                                     }
-                                    agent = DuelingTDAgent(
-                                        input_dims=env.observation_space.shape,
-                                        action_space=env.action_space,
-                                        gamma=0.99,
-                                        mem_size=1000,
-                                        batch_size=batch_size,
-                                        network_args=network_args,
-                                        optimizer_type=optimizer_type,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        is_double=is_double,
-                                        algorithm_type=algorithm_type,
-                                        policy_type=PolicyType.EPSILON_GREEDY,
-                                        policy_args=policy_args,
-                                        assign_priority=assign_priority)
+                                    agents = {}
 
-                                    agents = generate_agents_for_petting_zoo(env, agent)
+                                    for agent_id in env.possible_agents:
+                                        agents.update({agent_id: DuelingTDAgent(
+                                            input_dims=env.observation_spaces[agent_id].shape,
+                                            action_space=env.action_spaces[agent_id],
+                                            gamma=0.99,
+                                            mem_size=1000,
+                                            batch_size=batch_size,
+                                            network_args=network_args,
+                                            optimizer_type=optimizer_type,
+                                            replace=1000,
+                                            optimizer_args=network_optimizer_args,
+                                            is_double=is_double,
+                                            algorithm_type=algorithm_type,
+                                            policy_type=PolicyType.EPSILON_GREEDY,
+                                            policy_args=policy_args,
+                                            assign_priority=assign_priority)})
 
                                     result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
@@ -319,23 +319,24 @@ def run_dueling_td_softmax(env, env_name):
                                 network_optimizer_args = {
                                     'learning_rate': learning_rate
                                 }
-                                agent = DuelingTDAgent(
-                                    input_dims=env.observation_space.shape,
-                                    action_space=env.action_space,
-                                    gamma=0.99,
-                                    mem_size=1000,
-                                    batch_size=batch_size,
-                                    network_args=network_args,
-                                    optimizer_type=optimizer_type,
-                                    replace=1000,
-                                    optimizer_args=network_optimizer_args,
-                                    is_double=is_double,
-                                    algorithm_type=algorithm_type,
-                                    policy_type=PolicyType.SOFTMAX,
-                                    policy_args=policy_args,
-                                    assign_priority=assign_priority)
+                                agents = {}
 
-                                agents = generate_agents_for_petting_zoo(env, agent)
+                                for agent_id in env.possible_agents:
+                                    agents.update({agent_id: DuelingTDAgent(
+                                        input_dims=env.observation_spaces[agent_id].shape,
+                                        action_space=env.action_spaces[agent_id],
+                                        gamma=0.99,
+                                        mem_size=1000,
+                                        batch_size=batch_size,
+                                        network_args=network_args,
+                                        optimizer_type=optimizer_type,
+                                        replace=1000,
+                                        optimizer_args=network_optimizer_args,
+                                        is_double=is_double,
+                                        algorithm_type=algorithm_type,
+                                        policy_type=PolicyType.SOFTMAX,
+                                        policy_args=policy_args,
+                                        assign_priority=assign_priority)})
 
                                 result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
@@ -381,21 +382,24 @@ def run_dueling_td_ucb(env, env_name):
                             network_optimizer_args = {
                                 'learning_rate': learning_rate
                             }
-                            agent = DuelingTDAgent(
-                                input_dims=env.observation_space.shape,
-                                action_space=env.action_space,
-                                gamma=0.99,
-                                mem_size=1000,
-                                batch_size=batch_size,
-                                network_args=network_args,
-                                optimizer_type=optimizer_type,
-                                replace=1000,
-                                optimizer_args=network_optimizer_args,
-                                is_double=is_double,
-                                algorithm_type=algorithm_type,
-                                policy_type=PolicyType.UCB,
-                                policy_args=policy_args,
-                                assign_priority=assign_priority)
+                            agents = {}
+
+                            for agent_id in env.possible_agents:
+                                agents.update({agent_id: DuelingTDAgent(
+                                    input_dims=env.observation_spaces[agent_id].shape,
+                                    action_space=env.action_spaces[agent_id],
+                                    gamma=0.99,
+                                    mem_size=1000,
+                                    batch_size=batch_size,
+                                    network_args=network_args,
+                                    optimizer_type=optimizer_type,
+                                    replace=1000,
+                                    optimizer_args=network_optimizer_args,
+                                    is_double=is_double,
+                                    algorithm_type=algorithm_type,
+                                    policy_type=PolicyType.UCB,
+                                    policy_args=policy_args,
+                                    assign_priority=assign_priority)})
 
                             new_row = {
                                 'batch_size': batch_size,
@@ -405,8 +409,6 @@ def run_dueling_td_ucb(env, env_name):
                                 'is_double': 'Yes' if is_double else 'No',
                                 'assign_priority': 'Yes' if assign_priority else 'No',
                             }
-
-                            agents = generate_agents_for_petting_zoo(env, agent)
 
                             result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
@@ -453,19 +455,20 @@ def run_ddpg(env, env_name):
                         critic_optimizer_args = {
                             'learning_rate': critic_learning_rate
                         }
-                        agent = DDPGAgent(
-                            input_dims=env.observation_space.shape,
-                            action_space=env.action_space,
-                            tau=tau, network_args=network_args,
-                            batch_size=batch_size,
-                            actor_optimizer_type=NetworkOptimizer.ADAM,
-                            critic_optimizer_type=NetworkOptimizer.ADAM,
-                            actor_optimizer_args=actor_optimizer_args,
-                            critic_optimizer_args=critic_optimizer_args,
-                            assign_priority=assign_priority
-                        )
+                        agents = {}
 
-                        agents = generate_agents_for_petting_zoo(env, agent)
+                        for agent_id in env.possible_agents:
+                            agents.update({agent_id: DDPGAgent(
+                                input_dims=env.observation_spaces[agent_id].shape,
+                                action_space=env.action_spaces[agent_id],
+                                tau=tau, network_args=network_args,
+                                batch_size=batch_size,
+                                actor_optimizer_type=NetworkOptimizer.ADAM,
+                                critic_optimizer_type=NetworkOptimizer.ADAM,
+                                actor_optimizer_args=actor_optimizer_args,
+                                critic_optimizer_args=critic_optimizer_args,
+                                assign_priority=assign_priority
+                            )})
 
                         result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
@@ -509,19 +512,20 @@ def run_td3(env, env_name):
     for batch_size in [64, 100, 128]:
         for tau in [0.005, 0.01]:
             for assign_priority in [False, True]:
-                agent = TD3Agent(
-                    input_dims=env.observation_space.shape,
-                    action_space=env.action_space,
-                    tau=tau, network_args=network_args,
-                    batch_size=batch_size,
-                    actor_optimizer_type=NetworkOptimizer.ADAM,
-                    critic_optimizer_type=NetworkOptimizer.ADAM,
-                    actor_optimizer_args=actor_optimizer_args,
-                    critic_optimizer_args=critic_optimizer_args,
-                    assign_priority=assign_priority
-                )
+                agents = {}
 
-                agents = generate_agents_for_petting_zoo(env, agent)
+                for agent_id in env.possible_agents:
+                    agents.update({agent_id: TD3Agent(
+                        input_dims=env.observation_spaces[agent_id].shape,
+                        action_space=env.action_spaces[agent_id],
+                        tau=tau, network_args=network_args,
+                        batch_size=batch_size,
+                        actor_optimizer_type=NetworkOptimizer.ADAM,
+                        critic_optimizer_type=NetworkOptimizer.ADAM,
+                        actor_optimizer_args=actor_optimizer_args,
+                        critic_optimizer_args=critic_optimizer_args,
+                        assign_priority=assign_priority
+                    )})
 
                 result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
@@ -558,10 +562,11 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, **args):
     for learning_type in [LearningType.OFFLINE]:
         for use_model_only in [False, True]:
 
-            agent = HeuristicWithDT(heuristic_func, use_model_only, env.action_space,
-                                    False, 0, False, None, None, None, **args)
+            agents = {}
 
-            agents = generate_agents_for_petting_zoo(env, agent)
+            for agent_id in env.possible_agents:
+                agents.update({agent_id: HeuristicWithDT(heuristic_func, use_model_only, env.action_spaces[agent_id],
+                                                         False, 0, False, None, None, None, **args)})
 
             result = run_pettingzoo_env(env, agents, learning_type=learning_type,
                                         n_games_train=500, n_games_test=50)
@@ -616,28 +621,29 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args):
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
                                                 }
-                                                agent = HeuristicWithTD(
-                                                    input_dims=env.observation_space.shape,
-                                                    action_space=env.action_space,
-                                                    gamma=0.99,
-                                                    mem_size=1000000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.EPSILON_GREEDY,
-                                                    policy_args=policy_args,
-                                                    use_model_only=use_model_only,
-                                                    learning_type=learning_type,
-                                                    heuristic_func=heuristic_func,
-                                                    add_conservative_loss=add_conservative_loss,
-                                                    alpha=alpha,
-                                                    **args)
+                                                agents = {}
 
-                                                agents = generate_agents_for_petting_zoo(env, agent)
+                                                for agent_id in env.possible_agents:
+                                                    agents.update({agent_id: HeuristicWithTD(
+                                                        input_dims=env.observation_spaces[agent_id].shape,
+                                                        action_space=env.action_spaces[agent_id],
+                                                        gamma=0.99,
+                                                        mem_size=1000000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.EPSILON_GREEDY,
+                                                        policy_args=policy_args,
+                                                        use_model_only=use_model_only,
+                                                        learning_type=learning_type,
+                                                        heuristic_func=heuristic_func,
+                                                        add_conservative_loss=add_conservative_loss,
+                                                        alpha=alpha,
+                                                        **args)})
 
                                                 result = run_pettingzoo_env(env, agents,
                                                                             learning_type=learning_type,
@@ -696,28 +702,29 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, **args):
                                             network_optimizer_args = {
                                                 'learning_rate': learning_rate
                                             }
-                                            agent = HeuristicWithTD(
-                                                input_dims=env.observation_space.shape,
-                                                action_space=env.action_space,
-                                                gamma=0.99,
-                                                mem_size=1000000,
-                                                batch_size=batch_size,
-                                                network_args=network_args,
-                                                optimizer_type=optimizer_type,
-                                                replace=1000,
-                                                optimizer_args=network_optimizer_args,
-                                                is_double=is_double,
-                                                algorithm_type=algorithm_type,
-                                                policy_type=PolicyType.SOFTMAX,
-                                                policy_args=policy_args,
-                                                heuristic_func=heuristic_func,
-                                                learning_type=learning_type,
-                                                add_conservative_loss=add_conservative_loss,
-                                                alpha=alpha,
-                                                use_model_only=use_model_only,
-                                                **args)
+                                            agents = {}
 
-                                            agents = generate_agents_for_petting_zoo(env, agent)
+                                            for agent_id in env.possible_agents:
+                                                agents.update({agent_id: HeuristicWithTD(
+                                                    input_dims=env.observation_spaces[agent_id].shape,
+                                                    action_space=env.action_spaces[agent_id],
+                                                    gamma=0.99,
+                                                    mem_size=1000000,
+                                                    batch_size=batch_size,
+                                                    network_args=network_args,
+                                                    optimizer_type=optimizer_type,
+                                                    replace=1000,
+                                                    optimizer_args=network_optimizer_args,
+                                                    is_double=is_double,
+                                                    algorithm_type=algorithm_type,
+                                                    policy_type=PolicyType.SOFTMAX,
+                                                    policy_args=policy_args,
+                                                    heuristic_func=heuristic_func,
+                                                    learning_type=learning_type,
+                                                    add_conservative_loss=add_conservative_loss,
+                                                    alpha=alpha,
+                                                    use_model_only=use_model_only,
+                                                    **args)})
 
                                             result = run_pettingzoo_env(env, agents,
                                                                         learning_type=learning_type,
@@ -771,27 +778,28 @@ def run_td_ucb_heuristics(env, env_name, heuristic_func, **args):
                                         network_optimizer_args = {
                                             'learning_rate': learning_rate
                                         }
-                                        agent = HeuristicWithTD(
-                                            input_dims=env.observation_space.shape,
-                                            action_space=env.action_space,
-                                            gamma=0.99,
-                                            mem_size=1000000,
-                                            batch_size=batch_size,
-                                            network_args=network_args,
-                                            optimizer_type=optimizer_type,
-                                            replace=1000,
-                                            optimizer_args=network_optimizer_args,
-                                            is_double=is_double,
-                                            algorithm_type=algorithm_type,
-                                            policy_type=PolicyType.UCB,
-                                            policy_args=policy_args,
-                                            learning_type=learning_type,
-                                            use_model_only=use_model_only,
-                                            heuristic_func=heuristic_func,
-                                            add_conservative_loss=add_conservative_loss,
-                                            alpha=alpha, **args)
+                                        agents = {}
 
-                                        agents = generate_agents_for_petting_zoo(env, agent)
+                                        for agent_id in env.possible_agents:
+                                            agents.update({agent_id: HeuristicWithTD(
+                                                input_dims=env.observation_spaces[agent_id].shape,
+                                                action_space=env.action_spaces[agent_id],
+                                                gamma=0.99,
+                                                mem_size=1000000,
+                                                batch_size=batch_size,
+                                                network_args=network_args,
+                                                optimizer_type=optimizer_type,
+                                                replace=1000,
+                                                optimizer_args=network_optimizer_args,
+                                                is_double=is_double,
+                                                algorithm_type=algorithm_type,
+                                                policy_type=PolicyType.UCB,
+                                                policy_args=policy_args,
+                                                learning_type=learning_type,
+                                                use_model_only=use_model_only,
+                                                heuristic_func=heuristic_func,
+                                                add_conservative_loss=add_conservative_loss,
+                                                alpha=alpha, **args)})
 
                                         result = run_pettingzoo_env(env, agents, learning_type=learning_type,
                                                                     n_games_train=500, n_games_test=50)
@@ -852,27 +860,28 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **ar
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
                                                 }
-                                                agent = HeuristicWithDuelingTD(
-                                                    input_dims=env.observation_space.shape,
-                                                    action_space=env.action_space,
-                                                    gamma=0.99,
-                                                    mem_size=1000000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.EPSILON_GREEDY,
-                                                    policy_args=policy_args,
-                                                    use_model_only=use_model_only,
-                                                    learning_type=learning_type,
-                                                    heuristic_func=heuristic_func,
-                                                    add_conservative_loss=add_conservative_loss,
-                                                    alpha=alpha, **args)
+                                                agents = {}
 
-                                                agents = generate_agents_for_petting_zoo(env, agent)
+                                                for agent_id in env.possible_agents:
+                                                    agents.update({agent_id: HeuristicWithDuelingTD(
+                                                        input_dims=env.observation_spaces[agent_id].shape,
+                                                        action_space=env.action_spaces[agent_id],
+                                                        gamma=0.99,
+                                                        mem_size=1000000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.EPSILON_GREEDY,
+                                                        policy_args=policy_args,
+                                                        use_model_only=use_model_only,
+                                                        learning_type=learning_type,
+                                                        heuristic_func=heuristic_func,
+                                                        add_conservative_loss=add_conservative_loss,
+                                                        alpha=alpha, **args)})
 
                                                 result = run_pettingzoo_env(env, agents,
                                                                             learning_type=learning_type,
@@ -930,27 +939,28 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, **args):
                                             network_optimizer_args = {
                                                 'learning_rate': learning_rate
                                             }
-                                            agent = HeuristicWithDuelingTD(
-                                                input_dims=env.observation_space.shape,
-                                                action_space=env.action_space,
-                                                gamma=0.99,
-                                                mem_size=1000000,
-                                                batch_size=batch_size,
-                                                network_args=network_args,
-                                                optimizer_type=optimizer_type,
-                                                replace=1000,
-                                                optimizer_args=network_optimizer_args,
-                                                is_double=is_double,
-                                                algorithm_type=algorithm_type,
-                                                policy_type=PolicyType.SOFTMAX,
-                                                policy_args=policy_args,
-                                                heuristic_func=heuristic_func,
-                                                learning_type=learning_type,
-                                                add_conservative_loss=add_conservative_loss,
-                                                alpha=alpha,
-                                                use_model_only=use_model_only, **args)
+                                            agents = {}
 
-                                            agents = generate_agents_for_petting_zoo(env, agent)
+                                            for agent_id in env.possible_agents:
+                                                agents.update({agent_id: HeuristicWithDuelingTD(
+                                                    input_dims=env.observation_spaces[agent_id].shape,
+                                                    action_space=env.action_spaces[agent_id],
+                                                    gamma=0.99,
+                                                    mem_size=1000000,
+                                                    batch_size=batch_size,
+                                                    network_args=network_args,
+                                                    optimizer_type=optimizer_type,
+                                                    replace=1000,
+                                                    optimizer_args=network_optimizer_args,
+                                                    is_double=is_double,
+                                                    algorithm_type=algorithm_type,
+                                                    policy_type=PolicyType.SOFTMAX,
+                                                    policy_args=policy_args,
+                                                    heuristic_func=heuristic_func,
+                                                    learning_type=learning_type,
+                                                    add_conservative_loss=add_conservative_loss,
+                                                    alpha=alpha,
+                                                    use_model_only=use_model_only, **args)})
 
                                             result = run_pettingzoo_env(env, agents,
                                                                         learning_type=learning_type,
@@ -1006,27 +1016,28 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, **args):
                                         network_optimizer_args = {
                                             'learning_rate': learning_rate
                                         }
-                                        agent = HeuristicWithDuelingTD(
-                                            input_dims=env.observation_space.shape,
-                                            action_space=env.action_space,
-                                            gamma=0.99,
-                                            mem_size=1000000,
-                                            batch_size=batch_size,
-                                            network_args=network_args,
-                                            optimizer_type=optimizer_type,
-                                            replace=1000,
-                                            optimizer_args=network_optimizer_args,
-                                            is_double=is_double,
-                                            algorithm_type=algorithm_type,
-                                            policy_type=PolicyType.UCB,
-                                            policy_args=policy_args,
-                                            learning_type=learning_type,
-                                            use_model_only=use_model_only,
-                                            heuristic_func=heuristic_func,
-                                            add_conservative_loss=add_conservative_loss,
-                                            alpha=alpha, **args)
+                                        agents = {}
 
-                                        agents = generate_agents_for_petting_zoo(env, agent)
+                                        for agent_id in env.possible_agents:
+                                            agents.update({agent_id: HeuristicWithDuelingTD(
+                                                input_dims=env.observation_spaces[agent_id].shape,
+                                                action_space=env.action_spaces[agent_id],
+                                                gamma=0.99,
+                                                mem_size=1000000,
+                                                batch_size=batch_size,
+                                                network_args=network_args,
+                                                optimizer_type=optimizer_type,
+                                                replace=1000,
+                                                optimizer_args=network_optimizer_args,
+                                                is_double=is_double,
+                                                algorithm_type=algorithm_type,
+                                                policy_type=PolicyType.UCB,
+                                                policy_args=policy_args,
+                                                learning_type=learning_type,
+                                                use_model_only=use_model_only,
+                                                heuristic_func=heuristic_func,
+                                                add_conservative_loss=add_conservative_loss,
+                                                alpha=alpha, **args)})
 
                                         result = run_pettingzoo_env(env, agents, learning_type=learning_type,
                                                                     n_games_train=500, n_games_test=50)
@@ -1076,21 +1087,22 @@ def run_ddpg_heuristics(env, env_name, heuristic_func, **args):
                             critic_optimizer_args = {
                                 'learning_rate': critic_learning_rate
                             }
-                            agent = HeuristicWithDDPG(
-                                input_dims=env.observation_space.shape,
-                                action_space=env.action_space,
-                                tau=tau, network_args=network_args,
-                                batch_size=batch_size,
-                                actor_optimizer_type=NetworkOptimizer.ADAM,
-                                critic_optimizer_type=NetworkOptimizer.ADAM,
-                                actor_optimizer_args=actor_optimizer_args,
-                                critic_optimizer_args=critic_optimizer_args,
-                                learning_type=learning_type,
-                                use_model_only=use_model_only,
-                                heuristic_func=heuristic_func, **args
-                            )
+                            agents = {}
 
-                            agents = generate_agents_for_petting_zoo(env, agent)
+                            for agent_id in env.possible_agents:
+                                agents.update({agent_id: HeuristicWithDDPG(
+                                    input_dims=env.observation_spaces[agent_id].shape,
+                                    action_space=env.action_spaces[agent_id],
+                                    tau=tau, network_args=network_args,
+                                    batch_size=batch_size,
+                                    actor_optimizer_type=NetworkOptimizer.ADAM,
+                                    critic_optimizer_type=NetworkOptimizer.ADAM,
+                                    actor_optimizer_args=actor_optimizer_args,
+                                    critic_optimizer_args=critic_optimizer_args,
+                                    learning_type=learning_type,
+                                    use_model_only=use_model_only,
+                                    heuristic_func=heuristic_func, **args
+                                )})
 
                             result = run_pettingzoo_env(env, agents, learning_type=learning_type,
                                                         n_games_train=500, n_games_test=50)
@@ -1139,21 +1151,22 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
                             critic_optimizer_args = {
                                 'learning_rate': critic_learning_rate
                             }
-                            agent = HeuristicWithTD3(
-                                input_dims=env.observation_space.shape,
-                                action_space=env.action_space,
-                                tau=tau, network_args=network_args,
-                                batch_size=batch_size,
-                                actor_optimizer_type=NetworkOptimizer.ADAM,
-                                critic_optimizer_type=NetworkOptimizer.ADAM,
-                                actor_optimizer_args=actor_optimizer_args,
-                                critic_optimizer_args=critic_optimizer_args,
-                                learning_type=learning_type,
-                                use_model_only=use_model_only,
-                                heuristic_func=heuristic_func, **args
-                            )
+                            agents = {}
 
-                            agents = generate_agents_for_petting_zoo(env, agent)
+                            for agent_id in env.possible_agents:
+                                agents.update({agent_id: HeuristicWithTD3(
+                                    input_dims=env.observation_spaces[agent_id].shape,
+                                    action_space=env.action_spaces[agent_id],
+                                    tau=tau, network_args=network_args,
+                                    batch_size=batch_size,
+                                    actor_optimizer_type=NetworkOptimizer.ADAM,
+                                    critic_optimizer_type=NetworkOptimizer.ADAM,
+                                    actor_optimizer_args=actor_optimizer_args,
+                                    critic_optimizer_args=critic_optimizer_args,
+                                    learning_type=learning_type,
+                                    use_model_only=use_model_only,
+                                    heuristic_func=heuristic_func, **args
+                                )})
 
                             result = run_pettingzoo_env(env, agents, learning_type=learning_type,
                                                         n_games_train=500, n_games_test=50)
@@ -1175,18 +1188,20 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
 
-def run_heuristics(env, env_name, heuristic_func, **args):
+def run_discrete_heuristics(env, env_name, heuristic_func, **args):
     run_decision_tree_heuristics(env, env_name, heuristic_func, **args)
-    if type(env.action_space) == Discrete:
-        run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args)
-        run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args)
-        run_td_softmax_heuristics(env, env_name, heuristic_func, **args)
-        run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, **args)
-        run_td_ucb_heuristics(env, env_name, heuristic_func, **args)
-        run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, **args)
-    else:
-        run_ddpg_heuristics(env, env_name, heuristic_func, **args)
-        run_td3_heuristics(env, env_name, heuristic_func, **args)
+    run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args)
+    run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args)
+    run_td_softmax_heuristics(env, env_name, heuristic_func, **args)
+    run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, **args)
+    run_td_ucb_heuristics(env, env_name, heuristic_func, **args)
+    run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, **args)
+
+
+def run_continuous_heuristics(env, env_name, heuristic_func, **args):
+    run_decision_tree_heuristics(env, env_name, heuristic_func, **args)
+    run_ddpg_heuristics(env, env_name, heuristic_func, **args)
+    run_td3_heuristics(env, env_name, heuristic_func, **args)
 
 
 continuous_env = pistonball_v4.env(continuous=True)
@@ -1273,5 +1288,5 @@ def discrete_policy(self, obs):
 
 run_all_td_methods(discrete_env, 'pistonball')
 run_actor_critic_continuous_methods(continuous_env, 'pistonball')
-run_heuristics(discrete_env, 'pistonball', discrete_policy)
-run_heuristics(continuous_env, 'pistonball', continuous_policy)
+run_discrete_heuristics(discrete_env, 'pistonball', discrete_policy)
+run_continuous_heuristics(continuous_env, 'pistonball', continuous_policy)
