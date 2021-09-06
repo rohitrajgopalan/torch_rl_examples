@@ -221,7 +221,7 @@ def run_dueling_td_epsilon_greedy(env, env_name):
                             '{0}_dueling_td_epsilon_greedy.csv'.format(env_name))
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
-                   'using_move_matrix', 'is_double', 'algorithm_type', 'enable_decay',
+                   'is_double', 'algorithm_type', 'enable_decay',
                    'epsilon_start', 'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)

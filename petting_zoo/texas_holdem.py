@@ -340,7 +340,7 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty):
                             '{0}_dueling_td_epsilon_greedy.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate',
-                   'using_move_matrix', 'is_double', 'algorithm_type', 'enable_decay',
+                   'is_double', 'algorithm_type', 'enable_decay',
                    'epsilon_start', 'enable_action_blocker', 'use_ml_for_action_blocker',
                    'num_time_steps_test', 'avg_score_test']
 
