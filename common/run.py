@@ -110,8 +110,9 @@ def run_pettingzoo_env(env, agents, n_games_train, n_games_test, learning_type=L
     num_agents = 0
 
     for agent_id in agents:
-        scores_test.update({agent_id: np.zeros(n_games_test)})
-        num_agents += 1
+        if type(agents[agent_id]) != RandomLegal:
+            scores_test.update({agent_id: np.zeros(n_games_test)})
+            num_agents += 1
 
     for current_learning_type in learning_types:
         for current_game in range(n_games_train):
@@ -220,8 +221,9 @@ def run_pettingzoo_env(env, agents, n_games_train, n_games_test, learning_type=L
 
     avg_reward_test = 0
     for agent_id in agents:
-        scores = scores_test[agent_id]
-        avg_reward_test += np.mean(scores)
+        if type(agents[agent_id]) != RandomLegal:
+            scores = scores_test[agent_id]
+            avg_reward_test += np.mean(scores)
 
     avg_reward_test /= num_agents
 
