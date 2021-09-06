@@ -1,13 +1,16 @@
 import gym
 import numpy as np
 
-from common.common_gym_observation import run_actor_critic_continuous_methods, run_all_td_methods, run_heuristics
+from common.common_gym_observation import run_actor_critic_continuous_methods, run_all_td_methods, run_heuristics, \
+    run_hill_climbing, run_cem
 
 env_discrete = gym.make('LunarLander-v2')
 run_all_td_methods(env_discrete, 'lunar_lander', 100)
+run_hill_climbing(env_discrete, 'lunar_lander', 100)
 
 env_continuous = gym.make('LunarLanderContinuous-v2')
 run_actor_critic_continuous_methods(env_continuous, 'lunar_lander')
+run_cem(env_continuous, 'lunar_lander')
 
 
 def lunar_lander_discrete_heuristic(self, observation):

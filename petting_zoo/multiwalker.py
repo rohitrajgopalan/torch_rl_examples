@@ -1,6 +1,8 @@
 import os
 
 import pandas as pd
+from torch_rl.cem.agent import CEMAgent
+from torch_rl.heuristic.heuristic_with_cem import HeuristicWithCEM
 from torch_rl.heuristic.heuristic_with_dt import HeuristicWithDT
 from torch_rl.heuristic.heuristic_with_td3 import HeuristicWithTD3
 from torch_rl.heuristic.heuristic_with_ddpg import HeuristicWithDDPG
@@ -21,7 +23,6 @@ def run_ddpg(env, env_name):
 
     result_cols = ['batch_size', 'hidden_layer_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau', 'assign_priority',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -81,7 +82,6 @@ def run_td3(env, env_name):
 
     result_cols = ['batch_size', 'hidden_layer_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau', 'assign_priority',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -138,12 +138,43 @@ def run_actor_critic_continuous_methods(env, env_name):
     run_td3(env, env_name)
 
 
+def run_cem(env, env_name):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_cem.csv'.format(env_name))
+
+    result_cols = ['hidden_layer_size',
+                   'num_time_steps_test', 'avg_score_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    for hidden_layer_size in list({64, 128, 256, 512}):
+        network_args = {
+            'fc_dim': hidden_layer_size
+        }
+        agent = CEMAgent(input_dims=env.observation_space.shape, action_space=env.action_shape,
+                         network_args=network_args)
+
+        new_row = {'hidden_layer_size': hidden_layer_size}
+
+        agents = {}
+        for agent_id in env.possible_agents:
+            agents.update({agent_id: agent})
+
+        result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
+
+        for key in result:
+            new_row.update({key: result[key]})
+
+        results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, float_format='%.3f', index=False)
+
+
 def run_decision_tree_heuristics(env, env_name, heuristic_func, **args):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_heuristic_dt.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -177,7 +208,6 @@ def run_ddpg_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -242,7 +272,6 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -301,10 +330,49 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
 
+def run_cem_heuristics(env, env_name, heuristic_func, **args):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_heuristic_cem.csv'.format(env_name))
+
+    result_cols = ['use_model_only', 'learning_type', 'hidden_layer_size',
+                   'num_time_steps_test', 'avg_score_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    for use_model_only in [False, True]:
+        for learning_type in [LearningType.OFFLINE, LearningType.ONLINE, LearningType.BOTH]:
+            for hidden_layer_size in list({64, 128, 256, 512}):
+                network_args = {
+                    'fc_dim': hidden_layer_size
+                }
+                agent = HeuristicWithCEM(input_dims=env.observation_space.shape, action_space=env.action_shape,
+                                         network_args=network_args, heuristic_func=heuristic_func,
+                                         use_model_only=use_model_only,
+                                         **args)
+
+                new_row = {'hidden_layer_size': hidden_layer_size, 'learning_type': learning_type,
+                           'use_model_only': 'Yes' if use_model_only else 'No'}
+
+                agents = {}
+                for agent_id in env.possible_agents:
+                    agents.update({agent_id: agent})
+
+                result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50,
+                                            learning_type=learning_type)
+
+                for key in result:
+                    new_row.update({key: result[key]})
+
+                results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, float_format='%.3f', index=False)
+
+
 def run_heuristics(env, env_name, heuristic_func, **args):
     run_decision_tree_heuristics(env, env_name, heuristic_func, **args)
     run_ddpg_heuristics(env, env_name, heuristic_func, **args)
     run_td3_heuristics(env, env_name, heuristic_func, **args)
+    run_cem_heuristics(env, env_name, heuristic_func, **argss)
 
 
 env = multiwalker_v7.env()

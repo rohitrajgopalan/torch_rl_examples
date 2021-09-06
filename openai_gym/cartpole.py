@@ -1,9 +1,10 @@
 import gym
 
-from common.common_gym_observation import run_all_td_methods, run_heuristics
+from common.common_gym_observation import run_all_td_methods, run_heuristics, run_hill_climbing
 
 env = gym.make('CartPole-v1')
 run_all_td_methods(env, 'cartpole', 0)
+run_hill_climbing(env, 'cartpole', 0)
 
 
 def cartpole_heuristic(self, observation):

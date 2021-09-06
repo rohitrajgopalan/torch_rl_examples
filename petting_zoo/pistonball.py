@@ -1,18 +1,17 @@
-import numpy as np
-from pettingzoo.butterfly import pistonball_v4
-
 import os
 
+import numpy as np
 import pandas as pd
-from gym.spaces import Discrete
+from pettingzoo.butterfly import pistonball_v4
+from torch_rl.ddpg.agent import DDPGAgent
+from torch_rl.dueling_td.agent import DuelingTDAgent
+from torch_rl.heuristic.heuristic_with_cem import HeuristicWithCEM
+from torch_rl.heuristic.heuristic_with_ddpg import HeuristicWithDDPG
 from torch_rl.heuristic.heuristic_with_dt import HeuristicWithDT
+from torch_rl.heuristic.heuristic_with_dueling_td import HeuristicWithDuelingTD
 from torch_rl.heuristic.heuristic_with_td import HeuristicWithTD
 from torch_rl.heuristic.heuristic_with_td3 import HeuristicWithTD3
-from torch_rl.heuristic.heuristic_with_dueling_td import HeuristicWithDuelingTD
-from torch_rl.heuristic.heuristic_with_ddpg import HeuristicWithDDPG
 from torch_rl.td.agent import TDAgent
-from torch_rl.dueling_td.agent import DuelingTDAgent
-from torch_rl.ddpg.agent import DDPGAgent
 from torch_rl.td3.agent import TD3Agent
 from torch_rl.utils.types import NetworkOptimizer, TDAlgorithmType, PolicyType, LearningType
 
@@ -25,7 +24,6 @@ def run_td_epsilon_greedy(env, env_name):
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'assign_priority', 'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -98,7 +96,6 @@ def run_td_softmax(env, env_name):
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'assign_priority', 'is_double', 'algorithm_type', 'tau',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
     results = pd.DataFrame(columns=result_cols)
 
@@ -162,7 +159,6 @@ def run_td_ucb(env, env_name):
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'assign_priority', 'is_double', 'algorithm_type',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -226,9 +222,7 @@ def run_dueling_td_epsilon_greedy(env, env_name):
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'using_move_matrix', 'is_double', 'algorithm_type', 'enable_decay',
-                   'epsilon_start',
-                   'num_time_steps_train', 'avg_score_train',
-                   'num_time_steps_test', 'avg_score_test']
+                   'epsilon_start', 'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -297,7 +291,6 @@ def run_dueling_td_softmax(env, env_name):
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'assign_priority', 'is_double', 'algorithm_type', 'tau',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -362,7 +355,6 @@ def run_dueling_td_ucb(env, env_name):
                             '{0}_dueling_td_ucb.csv'.format(env_name))
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'assign_priority', 'is_double', 'algorithm_type',
-                   'num_time_steps_train', 'avg_score_train',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -436,7 +428,7 @@ def run_ddpg(env, env_name):
 
     result_cols = ['batch_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau', 'assign_priority',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
     network_args = {
@@ -494,7 +486,7 @@ def run_td3(env, env_name):
 
     result_cols = ['batch_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau', 'assign_priority',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -554,8 +546,7 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, **args):
                             '{0}_heuristic_dt.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test',
-                   'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -590,8 +581,7 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate', 'is_double', 'algorithm_type', 'enable_decay',
-                   'epsilon_start', 'add_conservative_loss', 'alpha', 'num_time_steps_train',
-                   'avg_score_train', 'num_time_steps_test',
+                   'epsilon_start', 'add_conservative_loss', 'alpha', 'num_time_steps_test',
                    'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -677,9 +667,7 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, **args):
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate', 'is_double', 'algorithm_type', 'tau',
                    'add_conservative_loss', 'alpha',
-                   'num_time_steps_train',
-                   'avg_score_train', 'num_time_steps_test',
-                   'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -762,7 +750,7 @@ def run_td_ucb_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'optimizer', 'learning_rate',
                    'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -829,9 +817,7 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **ar
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'optimizer', 'learning_rate',
                    'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
-                   'add_conservative_loss', 'alpha',
-                   'num_time_steps_train', 'avg_score_train', 'num_actions_blocked_train', 'num_time_steps_test',
-                   'avg_score_test']
+                   'add_conservative_loss', 'alpha', 'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -915,7 +901,7 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, **args):
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate', 'is_double', 'algorithm_type', 'tau',
                    'add_conservative_loss', 'alpha',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -1000,7 +986,7 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, **args):
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate',
                    'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -1067,7 +1053,7 @@ def run_ddpg_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
     network_args = {
@@ -1130,7 +1116,7 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau',
-                   'num_time_steps_train', 'avg_score_train', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -1186,6 +1172,39 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
                             results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
+
+
+def run_cem_heuristics(env, env_name, heuristic_func, **args):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_heuristic_cem.csv'.format(env_name))
+
+    result_cols = ['use_model_only', 'learning_type',
+                   'num_time_steps_test', 'avg_score_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    network_args = {
+        'fc_dim': (1024, 512),
+        'cnn_dims': [(32, 8, 4), (64, 4, 2), (64, 3, 1)]
+    }
+
+    for use_model_only in [False, True]:
+        for learning_type in [LearningType.OFFLINE, LearningType.OFFLINE, LearningType.BOTH]:
+            agent = HeuristicWithCEM(input_dims=env.observation_space.shape, action_space=env.action_shape,
+                                     network_args=network_args, use_model_only=use_model_only,
+                                     learning_type=learning_type, heuristic_func=heuristic_func, **args)
+
+            new_row = {'use_model_only': 'Yes' if use_model_only else 'No',
+                       'learning_type': learning_type.name}
+
+            result = run_pettingzoo_env(env, agent, n_games_train=500, n_games_test=50, learning_type=learning_type)
+
+            for key in result:
+                new_row.update({key: result[key]})
+
+            results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, float_format='%.3f', index=False)
 
 
 def run_discrete_heuristics(env, env_name, heuristic_func, **args):

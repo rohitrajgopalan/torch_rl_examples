@@ -1,13 +1,16 @@
 import gym
 import numpy as np
 
-from common.common_gym_observation import run_actor_critic_continuous_methods, run_all_td_methods, run_heuristics
+from common.common_gym_observation import run_actor_critic_continuous_methods, run_all_td_methods, run_heuristics, \
+    run_hill_climbing, run_cem
 
 env_discrete = gym.make('MountainCar-v0')
 run_all_td_methods(env_discrete, 'mountain_car', 0, np.array([0.5, 0]))
+run_hill_climbing(env_discrete, 'mountain_car', 0)
 
 env_continuous = gym.make('MountainCarContinuous-v0')
 run_actor_critic_continuous_methods(env_continuous, 'mountain_car', np.array([0.45, 0]))
+run_cem(env_continuous, 'mountain_car', np.array([0.45, 0]))
 
 
 def mountain_car_discrete_heuristic(self, observation):

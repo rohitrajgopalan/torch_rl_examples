@@ -1,6 +1,6 @@
 import gym
 
-from common.common_gym_observation import run_all_td_methods, run_heuristics
+from common.common_gym_observation import run_all_td_methods, run_heuristics, run_hill_climbing
 
 env = gym.make('Blackjack-v0')
 
@@ -14,4 +14,5 @@ def blackjack_heuristic(self, observation):
 
 
 run_all_td_methods(env, 'blackjack', 0)
+run_hill_climbing(env, 'blackjack', 0)
 run_heuristics(env, 'blackjack', penalty=0, heuristic_func=blackjack_heuristic)
