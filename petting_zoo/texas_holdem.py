@@ -46,7 +46,7 @@ def run_td_epsilon_greedy(env, env_name, penalty):
                                     for epsilon in epsilons:
                                         policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
                                         for assign_priority in [False, True]:
-                                            use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                            use_ml_flags = [True] if enable_action_blocker else [False]
                                             for use_ml_for_action_blocker in use_ml_flags:
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
@@ -125,7 +125,7 @@ def run_td_softmax(env, env_name, penalty):
                                 for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
                                     policy_args.update({'tau': tau})
                                     for assign_priority in [False, True]:
-                                        use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                        use_ml_flags = [True] if enable_action_blocker else [False]
                                         for use_ml_for_action_blocker in use_ml_flags:
                                             network_optimizer_args = {
                                                 'learning_rate': learning_rate
@@ -201,7 +201,7 @@ def run_td_ucb(env, env_name, penalty):
                         for learning_rate in [0.001, 0.0001]:
                             for hidden_layer_size in [256, 512, 1024]:
                                 for assign_priority in [False, True]:
-                                    use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                    use_ml_flags = [True] if enable_action_blocker else [False]
                                     for use_ml_for_action_blocker in use_ml_flags:
                                         network_optimizer_args = {
                                             'learning_rate': learning_rate
@@ -280,7 +280,7 @@ def run_td_thompson_sampling(env, env_name, penalty):
                         for learning_rate in [0.001, 0.0001]:
                             for hidden_layer_size in [256, 512, 1024]:
                                 for assign_priority in [False, True]:
-                                    use_ml_flags = [False, True] if enable_action_blocker else [False]
+                                    use_ml_flags = [True] if enable_action_blocker else [False]
                                     for use_ml_for_action_blocker in use_ml_flags:
                                         network_optimizer_args = {
                                             'learning_rate': learning_rate
@@ -361,8 +361,8 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty):
                                     for epsilon in epsilons:
                                         policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
                                         for assign_priority in [False, True]:
-                                            for use_ml_for_action_blocker in list(
-                                                    {False, enable_action_blocker}):
+                                            use_ml_flags = [True] if enable_action_blocker else [False]
+                                            for use_ml_for_action_blocker in use_ml_flags:
                                                 network_optimizer_args = {
                                                     'learning_rate': learning_rate
                                                 }
@@ -441,9 +441,8 @@ def run_dueling_td_softmax(env, env_name, penalty):
                                 for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
                                     policy_args.update({'tau': tau})
                                     for assign_priority in [False, True]:
-                                        for use_ml_for_action_blocker in list(
-                                                {False, enable_action_blocker}):
-
+                                        use_ml_flags = [True] if enable_action_blocker else [False]
+                                        for use_ml_for_action_blocker in use_ml_flags:
                                             network_optimizer_args = {
                                                 'learning_rate': learning_rate
                                             }
@@ -518,7 +517,8 @@ def run_dueling_td_ucb(env, env_name, penalty):
                         for learning_rate in [0.001, 0.0001]:
                             for hidden_layer_size in [256, 512, 1024]:
                                 for assign_priority in [False, True]:
-                                    for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+                                    use_ml_flags = [True] if enable_action_blocker else [False]
+                                    for use_ml_for_action_blocker in use_ml_flags:
                                         network_optimizer_args = {
                                             'learning_rate': learning_rate
                                         }
@@ -596,8 +596,8 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty):
                         for learning_rate in [0.001, 0.0001]:
                             for hidden_layer_size in [256, 512, 1024]:
                                 for assign_priority in [False, True]:
-                                    for use_ml_for_action_blocker in list({False, enable_action_blocker}):
-
+                                    use_ml_flags = [True] if enable_action_blocker else [False]
+                                    for use_ml_for_action_blocker in use_ml_flags:
                                         network_optimizer_args = {
                                             'learning_rate': learning_rate
                                         }
@@ -673,7 +673,8 @@ def run_hill_climbing(env, env_name, penalty):
     results = pd.DataFrame(columns=result_cols)
 
     for enable_action_blocker in list({False, penalty > 0}):
-        for use_ml_for_action_blocker in list({False, enable_action_blocker}):
+        use_ml_flags = [True] if enable_action_blocker else [False]
+        for use_ml_for_action_blocker in use_ml_flags:
             agent = HillClimbingAgent(input_dims=env.observation_space.shape, action_space=env.action_space,
                                       enable_action_blocking=enable_action_blocker,
                                       use_ml_for_action_blocker=use_ml_for_action_blocker,
