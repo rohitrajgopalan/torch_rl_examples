@@ -30,7 +30,7 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory',
-                   'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start', 'use_mse', 'learning_type',
+                   'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -58,98 +58,6 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
                                                 for assign_priority in [False, True]:
                                                     for use_preloaded_memory in [False, True]:
                                                         for use_mse in [False, True]:
-                                                            for learning_type in [LearningType.OFFLINE, LearningType.ONLINE, LearningType.BOTH]:
-                                                                network_optimizer_args = {
-                                                                    'learning_rate': learning_rate
-                                                                }
-                                                                network_args = {
-                                                                    'fc_dims': hidden_layer_size
-                                                                }
-                                                                agent = TDAgent(
-                                                                    input_dims=env.observation_space.shape,
-                                                                    action_space=env.action_space,
-                                                                    gamma=0.99,
-                                                                    mem_size=1000,
-                                                                    batch_size=batch_size,
-                                                                    network_args=network_args,
-                                                                    optimizer_type=optimizer_type,
-                                                                    replace=1000,
-                                                                    optimizer_args=network_optimizer_args,
-                                                                    enable_action_blocking=enable_action_blocker,
-                                                                    min_penalty=penalty,
-                                                                    goal=goal,
-                                                                    is_double=is_double,
-                                                                    algorithm_type=algorithm_type,
-                                                                    policy_type=PolicyType.EPSILON_GREEDY,
-                                                                    policy_args=policy_args,
-                                                                    assign_priority=assign_priority,
-                                                                    pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
-                                                                    action_blocker_timesteps=max_time_steps,
-                                                                    action_blocker_model_type=action_blocker_model_type,
-                                                                    use_mse=use_mse)
-
-                                                                result = run_gym_env(env, agent, n_games_train=500,
-                                                                                     n_games_test=50,
-                                                                                     learning_type=learning_type)
-
-                                                                new_row = {
-                                                                    'batch_size': batch_size,
-                                                                    'hidden_layer_size': hidden_layer_size,
-                                                                    'algorithm_type': algorithm_type,
-                                                                    'optimizer': optimizer_type.name.lower(),
-                                                                    'learning_rate': learning_rate,
-                                                                    'goal_focused': 'Yes' if goal else 'No',
-                                                                    'is_double': 'Yes' if is_double else 'No',
-                                                                    'enable_decay': 'Yes' if enable_decay else 'No',
-                                                                    'epsilon': epsilon,
-                                                                    'assign_priority': 'Yes' if assign_priority else 'No',
-                                                                    'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                                                                    'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
-                                                                    'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
-                                                                    'use_mse': 'Yes' if use_mse else 'No',
-                                                                    'learning_type': learning_type.name
-                                                                }
-                                                                for key in result:
-                                                                    new_row.update({key: result[key]})
-
-                                                                results = results.append(new_row, ignore_index=True)
-
-    results.to_csv(csv_file, index=False, float_format='%.3f')
-
-
-def run_td_softmax(env, env_name, penalty, env_goal=None):
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_td_softmax.csv'.format(env_name))
-
-    result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'assign_priority', 'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory',
-                   'is_double', 'algorithm_type', 'tau', 'use_mse', 'learning_type',
-                   'num_time_steps_test', 'avg_score_test']
-
-    results = pd.DataFrame(columns=result_cols)
-
-    pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
-    policy_args = {}
-
-    for is_double in [False, True]:
-        for algorithm_type in TDAlgorithmType.all():
-            for enable_action_blocker in list({False, penalty > 0}):
-                action_blocker_model_types = ['decision_tree', 'random_forest'] if enable_action_blocker else [None]
-                for action_blocker_model_type in action_blocker_model_types:
-                    for batch_size in [32, 64, 128]:
-                        for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                            for learning_rate in [0.001, 0.0001]:
-                                for hidden_layer_size in list({derive_hidden_layer_size(env, batch_size),
-                                                               64, 128, 256, 512}):
-                                    for goal in list({None, env_goal}):
-                                        for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
-                                            policy_args.update({'tau': tau})
-                                            for assign_priority in [False, True]:
-                                                for use_preloaded_memory in [False, True]:
-                                                    for use_mse in [False, True]:
-                                                        learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                 LearningType.BOTH] if enable_action_blocker else [LearningType.ONLINE]
-                                                        for learning_type in learning_types:
                                                             network_optimizer_args = {
                                                                 'learning_rate': learning_rate
                                                             }
@@ -171,17 +79,16 @@ def run_td_softmax(env, env_name, penalty, env_goal=None):
                                                                 goal=goal,
                                                                 is_double=is_double,
                                                                 algorithm_type=algorithm_type,
-                                                                policy_type=PolicyType.SOFTMAX,
+                                                                policy_type=PolicyType.EPSILON_GREEDY,
                                                                 policy_args=policy_args,
                                                                 assign_priority=assign_priority,
                                                                 pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
-                                                                action_blocker_model_type=action_blocker_model_type,
                                                                 action_blocker_timesteps=max_time_steps,
+                                                                action_blocker_model_type=action_blocker_model_type,
                                                                 use_mse=use_mse)
 
                                                             result = run_gym_env(env, agent, n_games_train=500,
-                                                                                 n_games_test=50,
-                                                                                 learning_type=learning_type)
+                                                                                 n_games_test=50)
 
                                                             new_row = {
                                                                 'batch_size': batch_size,
@@ -191,13 +98,13 @@ def run_td_softmax(env, env_name, penalty, env_goal=None):
                                                                 'learning_rate': learning_rate,
                                                                 'goal_focused': 'Yes' if goal else 'No',
                                                                 'is_double': 'Yes' if is_double else 'No',
-                                                                'tau': tau,
+                                                                'enable_decay': 'Yes' if enable_decay else 'No',
+                                                                'epsilon': epsilon,
                                                                 'assign_priority': 'Yes' if assign_priority else 'No',
                                                                 'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
                                                                 'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
                                                                 'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
-                                                                'use_mse': 'Yes' if use_mse else 'No',
-                                                                'learning_type': learning_type.name
+                                                                'use_mse': 'Yes' if use_mse else 'No'
                                                             }
                                                             for key in result:
                                                                 new_row.update({key: result[key]})
@@ -207,19 +114,19 @@ def run_td_softmax(env, env_name, penalty, env_goal=None):
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
 
-def run_td_ucb(env, env_name, penalty, env_goal=None):
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_td_ucb.csv'.format(env_name))
+def run_td_softmax(env, env_name, penalty, env_goal=None):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_td_softmax.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'assign_priority', 'is_double', 'algorithm_type',
-                   'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
-                   'learning_type', 'num_time_steps_test', 'avg_score_test']
+                   'assign_priority', 'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory',
+                   'is_double', 'algorithm_type', 'tau', 'use_mse',
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
-
-    policy_args = {'confidence_factor': 2}
+    policy_args = {}
 
     for is_double in [False, True]:
         for algorithm_type in TDAlgorithmType.all():
@@ -232,13 +139,11 @@ def run_td_ucb(env, env_name, penalty, env_goal=None):
                                 for hidden_layer_size in list({derive_hidden_layer_size(env, batch_size),
                                                                64, 128, 256, 512}):
                                     for goal in list({None, env_goal}):
-                                        for assign_priority in [False, True]:
-                                            for use_preloaded_memory in [False, True]:
-                                                for use_mse in [False, True]:
-                                                    learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                      LearningType.BOTH] if enable_action_blocker else [
-                                                        LearningType.ONLINE]
-                                                    for learning_type in learning_types:
+                                        for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
+                                            policy_args.update({'tau': tau})
+                                            for assign_priority in [False, True]:
+                                                for use_preloaded_memory in [False, True]:
+                                                    for use_mse in [False, True]:
                                                         network_optimizer_args = {
                                                             'learning_rate': learning_rate
                                                         }
@@ -260,17 +165,15 @@ def run_td_ucb(env, env_name, penalty, env_goal=None):
                                                             goal=goal,
                                                             is_double=is_double,
                                                             algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.UCB,
+                                                            policy_type=PolicyType.SOFTMAX,
                                                             policy_args=policy_args,
                                                             assign_priority=assign_priority,
                                                             pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
                                                             action_blocker_model_type=action_blocker_model_type,
                                                             action_blocker_timesteps=max_time_steps,
-                                                            use_mse=use_mse
-                                                        )
+                                                            use_mse=use_mse)
 
-                                                        result = run_gym_env(env, agent, n_games_train=500, n_games_test=50,
-                                                                             learning_type=learning_type)
+                                                        result = run_gym_env(env, agent, n_games_train=500, n_games_test=50)
 
                                                         new_row = {
                                                             'batch_size': batch_size,
@@ -280,17 +183,99 @@ def run_td_ucb(env, env_name, penalty, env_goal=None):
                                                             'learning_rate': learning_rate,
                                                             'goal_focused': 'Yes' if goal else 'No',
                                                             'is_double': 'Yes' if is_double else 'No',
+                                                            'tau': tau,
                                                             'assign_priority': 'Yes' if assign_priority else 'No',
                                                             'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else "No",
+                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
                                                             'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
-                                                            'use_mse': 'Yes' if use_mse else 'No',
-                                                            'learning_type': learning_type.name
+                                                            'use_mse': 'Yes' if use_mse else 'No'
                                                         }
                                                         for key in result:
                                                             new_row.update({key: result[key]})
 
                                                         results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, index=False, float_format='%.3f')
+
+
+def run_td_ucb(env, env_name, penalty, env_goal=None):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_td_ucb.csv'.format(env_name))
+
+    result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
+                   'assign_priority', 'is_double', 'algorithm_type',
+                   'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
+                   'num_time_steps_test', 'avg_score_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
+
+    policy_args = {'confidence_factor': 2}
+
+    for is_double in [False, True]:
+        for algorithm_type in TDAlgorithmType.all():
+            for enable_action_blocker in list({False, penalty > 0}):
+                action_blocker_model_types = ['decision_tree', 'random_forest'] if enable_action_blocker else [None]
+                for action_blocker_model_type in action_blocker_model_types:
+                    for batch_size in [32, 64, 128]:
+                        for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
+                            for learning_rate in [0.001, 0.0001]:
+                                for hidden_layer_size in list({derive_hidden_layer_size(env, batch_size),
+                                                               64, 128, 256, 512}):
+                                    for goal in list({None, env_goal}):
+                                        for assign_priority in [False, True]:
+                                            for use_preloaded_memory in [False, True]:
+                                                for use_mse in [False, True]:
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    agent = TDAgent(
+                                                        input_dims=env.observation_space.shape,
+                                                        action_space=env.action_space,
+                                                        gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.UCB,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                        action_blocker_model_type=action_blocker_model_type,
+                                                        action_blocker_timesteps=max_time_steps,
+                                                        use_mse=use_mse
+                                                    )
+
+                                                    result = run_gym_env(env, agent, n_games_train=500, n_games_test=50)
+
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else "No",
+                                                        'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
+                                                        'use_mse': 'Yes' if use_mse else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
+
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -305,7 +290,7 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None):
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'is_double', 'algorithm_type',
                    'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
-                   'learning_type', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -328,61 +313,55 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None):
                                         for assign_priority in [False, True]:
                                             for use_preloaded_memory in [False, True]:
                                                 for use_mse in [False, True]:
-                                                    learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                      LearningType.BOTH] if enable_action_blocker else [
-                                                        LearningType.ONLINE]
-                                                    for learning_type in learning_types:
-                                                        network_optimizer_args = {
-                                                            'learning_rate': learning_rate
-                                                        }
-                                                        network_args = {
-                                                            'fc_dims': hidden_layer_size
-                                                        }
-                                                        agent = TDAgent(
-                                                            input_dims=env.observation_space.shape,
-                                                            action_space=env.action_space,
-                                                            gamma=0.99,
-                                                            mem_size=1000,
-                                                            batch_size=batch_size,
-                                                            network_args=network_args,
-                                                            optimizer_type=optimizer_type,
-                                                            replace=1000,
-                                                            optimizer_args=network_optimizer_args,
-                                                            enable_action_blocking=enable_action_blocker,
-                                                            min_penalty=penalty,
-                                                            goal=goal,
-                                                            is_double=is_double,
-                                                            algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.THOMPSON_SAMPLING,
-                                                            policy_args=policy_args,
-                                                            assign_priority=assign_priority,
-                                                            action_blocker_model_type=action_blocker_model_type,
-                                                            action_blocker_timesteps=max_time_steps,
-                                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
-                                                            use_mse=use_mse)
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    agent = TDAgent(
+                                                        input_dims=env.observation_space.shape,
+                                                        action_space=env.action_space,
+                                                        gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.THOMPSON_SAMPLING,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        action_blocker_model_type=action_blocker_model_type,
+                                                        action_blocker_timesteps=max_time_steps,
+                                                        pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                        use_mse=use_mse)
 
-                                                        result = run_gym_env(env, agent, n_games_train=500,
-                                                                             n_games_test=50, learning_type=learning_type)
+                                                    result = run_gym_env(env, agent, n_games_train=500, n_games_test=50)
 
-                                                        new_row = {
-                                                            'batch_size': batch_size,
-                                                            'hidden_layer_size': hidden_layer_size,
-                                                            'algorithm_type': algorithm_type,
-                                                            'optimizer': optimizer_type.name.lower(),
-                                                            'learning_rate': learning_rate,
-                                                            'goal_focused': 'Yes' if goal else 'No',
-                                                            'is_double': 'Yes' if is_double else 'No',
-                                                            'assign_priority': 'Yes' if assign_priority else 'No',
-                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
-                                                            'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
-                                                            'use_mse': 'Yes' if use_mse else 'No',
-                                                            'learning_type': learning_type.name
-                                                        }
-                                                        for key in result:
-                                                            new_row.update({key: result[key]})
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
+                                                        'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
+                                                        'use_mse': 'Yes' if use_mse else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
 
-                                                        results = results.append(new_row, ignore_index=True)
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -396,7 +375,7 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'is_double', 'algorithm_type', 'enable_decay',
                    'epsilon_start', 'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory',
-                   'use_mse', 'learning_type', 'num_time_steps_test', 'avg_score_test']
+                   'use_mse', 'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -421,103 +400,6 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
                                                 for assign_priority in [False, True]:
                                                     for use_preloaded_memory in [False, True]:
                                                         for use_mse in [False, True]:
-                                                            learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                              LearningType.BOTH] if enable_action_blocker else [
-                                                                LearningType.ONLINE]
-                                                            for learning_type in learning_types:
-                                                                network_optimizer_args = {
-                                                                    'learning_rate': learning_rate
-                                                                }
-                                                                network_args = {
-                                                                    'fc_dims': hidden_layer_size
-                                                                }
-                                                                agent = DuelingTDAgent(
-                                                                    input_dims=env.observation_space.shape,
-                                                                    action_space=env.action_space,
-                                                                    gamma=0.99,
-                                                                    mem_size=1000,
-                                                                    batch_size=batch_size,
-                                                                    network_args=network_args,
-                                                                    optimizer_type=optimizer_type,
-                                                                    replace=1000,
-                                                                    optimizer_args=network_optimizer_args,
-                                                                    enable_action_blocking=enable_action_blocker,
-                                                                    min_penalty=penalty,
-                                                                    goal=goal,
-                                                                    is_double=is_double,
-                                                                    algorithm_type=algorithm_type,
-                                                                    policy_type=PolicyType.EPSILON_GREEDY,
-                                                                    policy_args=policy_args,
-                                                                    assign_priority=assign_priority,
-                                                                    action_blocker_model_type=action_blocker_model_type,
-                                                                    action_blocker_timesteps=max_time_steps,
-                                                                    pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
-                                                                    use_mse=use_mse)
-
-                                                                result = run_gym_env(env, agent, n_games_train=500,
-                                                                                     n_games_test=50,
-                                                                                     learning_type=learning_type)
-
-                                                                new_row = {
-                                                                    'batch_size': batch_size,
-                                                                    'hidden_layer_size': hidden_layer_size,
-                                                                    'algorithm_type': algorithm_type,
-                                                                    'optimizer': optimizer_type.name.lower(),
-                                                                    'learning_rate': learning_rate,
-                                                                    'goal_focused': 'Yes' if goal else 'No',
-                                                                    'is_double': 'Yes' if is_double else 'No',
-                                                                    'enable_decay': 'Yes' if enable_decay else 'No',
-                                                                    'epsilon': epsilon,
-                                                                    'assign_priority': 'Yes' if assign_priority else 'No',
-                                                                    'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                                                                    'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
-                                                                    'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
-                                                                    'use_mse': 'Yes' if use_mse else 'No',
-                                                                    'learning_type': learning_type.name
-                                                                }
-                                                                for key in result:
-                                                                    new_row.update({key: result[key]})
-
-                                                                results = results.append(new_row, ignore_index=True)
-
-    results.to_csv(csv_file, index=False, float_format='%.3f')
-
-
-def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
-    pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
-
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_dueling_td_softmax.csv'.format(env_name))
-
-    result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'assign_priority', 'is_double', 'algorithm_type', 'tau',
-                   'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
-                   'learning_type', 'num_time_steps_test', 'avg_score_test']
-
-    results = pd.DataFrame(columns=result_cols)
-
-    policy_args = {}
-
-    for is_double in [False, True]:
-        for algorithm_type in TDAlgorithmType.all():
-            for enable_action_blocker in list({False, penalty > 0}):
-                action_blocker_model_types = ['decision_tree', 'random_forest'] if enable_action_blocker else [None]
-                for action_blocker_model_type in action_blocker_model_types:
-                    for batch_size in [32, 64, 128]:
-                        for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                            for learning_rate in [0.001, 0.0001]:
-                                for hidden_layer_size in list({derive_hidden_layer_size(env, batch_size),
-                                                               64, 128, 256, 512}):
-                                    for goal in list({None, env_goal}):
-                                        for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
-                                            policy_args.update({'tau': tau})
-                                            for assign_priority in [False, True]:
-                                                for use_preloaded_memory in [False, True]:
-                                                    for use_mse in [False, True]:
-                                                        learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                          LearningType.BOTH] if enable_action_blocker else [
-                                                            LearningType.ONLINE]
-                                                        for learning_type in learning_types:
                                                             network_optimizer_args = {
                                                                 'learning_rate': learning_rate
                                                             }
@@ -539,7 +421,7 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
                                                                 goal=goal,
                                                                 is_double=is_double,
                                                                 algorithm_type=algorithm_type,
-                                                                policy_type=PolicyType.SOFTMAX,
+                                                                policy_type=PolicyType.EPSILON_GREEDY,
                                                                 policy_args=policy_args,
                                                                 assign_priority=assign_priority,
                                                                 action_blocker_model_type=action_blocker_model_type,
@@ -548,8 +430,7 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
                                                                 use_mse=use_mse)
 
                                                             result = run_gym_env(env, agent, n_games_train=500,
-                                                                                 n_games_test=50,
-                                                                                 learning_type=learning_type)
+                                                                                 n_games_test=50)
 
                                                             new_row = {
                                                                 'batch_size': batch_size,
@@ -559,13 +440,13 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
                                                                 'learning_rate': learning_rate,
                                                                 'goal_focused': 'Yes' if goal else 'No',
                                                                 'is_double': 'Yes' if is_double else 'No',
-                                                                'tau': tau,
+                                                                'enable_decay': 'Yes' if enable_decay else 'No',
+                                                                'epsilon': epsilon,
                                                                 'assign_priority': 'Yes' if assign_priority else 'No',
                                                                 'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                                                                'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
                                                                 'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
-                                                                'use_mse': 'Yes' if use_mse else 'No',
-                                                                'learning_type': learning_type.name
+                                                                'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
+                                                                'use_mse': 'Yes' if use_mse else 'No'
                                                             }
                                                             for key in result:
                                                                 new_row.update({key: result[key]})
@@ -575,19 +456,20 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
 
-def run_dueling_td_ucb(env, env_name, penalty, env_goal=None):
+def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_dueling_td_ucb.csv'.format(env_name))
+                            '{0}_dueling_td_softmax.csv'.format(env_name))
+
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
-                   'assign_priority', 'is_double', 'algorithm_type',
+                   'assign_priority', 'is_double', 'algorithm_type', 'tau',
                    'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
-                   'learning_type', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
-    policy_args = {'confidence_factor': 2}
+    policy_args = {}
 
     for is_double in [False, True]:
         for algorithm_type in TDAlgorithmType.all():
@@ -600,13 +482,11 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None):
                                 for hidden_layer_size in list({derive_hidden_layer_size(env, batch_size),
                                                                64, 128, 256, 512}):
                                     for goal in list({None, env_goal}):
-                                        for assign_priority in [False, True]:
-                                            for use_preloaded_memory in [False, True]:
-                                                for use_mse in [False, True]:
-                                                    learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                      LearningType.BOTH] if enable_action_blocker else [
-                                                        LearningType.ONLINE]
-                                                    for learning_type in learning_types:
+                                        for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
+                                            policy_args.update({'tau': tau})
+                                            for assign_priority in [False, True]:
+                                                for use_preloaded_memory in [False, True]:
+                                                    for use_mse in [False, True]:
                                                         network_optimizer_args = {
                                                             'learning_rate': learning_rate
                                                         }
@@ -628,13 +508,15 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None):
                                                             goal=goal,
                                                             is_double=is_double,
                                                             algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.UCB,
+                                                            policy_type=PolicyType.SOFTMAX,
                                                             policy_args=policy_args,
                                                             assign_priority=assign_priority,
                                                             action_blocker_model_type=action_blocker_model_type,
                                                             action_blocker_timesteps=max_time_steps,
                                                             pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
                                                             use_mse=use_mse)
+
+                                                        result = run_gym_env(env, agent, n_games_train=500, n_games_test=50)
 
                                                         new_row = {
                                                             'batch_size': batch_size,
@@ -644,22 +526,99 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None):
                                                             'learning_rate': learning_rate,
                                                             'goal_focused': 'Yes' if goal else 'No',
                                                             'is_double': 'Yes' if is_double else 'No',
+                                                            'tau': tau,
                                                             'assign_priority': 'Yes' if assign_priority else 'No',
                                                             'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
                                                             'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
-                                                            'use_mse': 'Yes' if use_mse else 'No',
-                                                            'learning_type': learning_type.name
+                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
+                                                            'use_mse': 'Yes' if use_mse else 'No'
                                                         }
-
-                                                        result = run_gym_env(env, agent, n_games_train=500,
-                                                                             n_games_test=50,
-                                                                             learning_type=learning_type)
-
                                                         for key in result:
                                                             new_row.update({key: result[key]})
 
                                                         results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, index=False, float_format='%.3f')
+
+
+def run_dueling_td_ucb(env, env_name, penalty, env_goal=None):
+    pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
+
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_dueling_td_ucb.csv'.format(env_name))
+    result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
+                   'assign_priority', 'is_double', 'algorithm_type',
+                   'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
+                   'num_time_steps_test', 'avg_score_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    policy_args = {'confidence_factor': 2}
+
+    for is_double in [False, True]:
+        for algorithm_type in TDAlgorithmType.all():
+            for enable_action_blocker in list({False, penalty > 0}):
+                action_blocker_model_types = ['decision_tree', 'random_forest'] if enable_action_blocker else [None]
+                for action_blocker_model_type in action_blocker_model_types:
+                    for batch_size in [32, 64, 128]:
+                        for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
+                            for learning_rate in [0.001, 0.0001]:
+                                for hidden_layer_size in list({derive_hidden_layer_size(env, batch_size),
+                                                               64, 128, 256, 512}):
+                                    for goal in list({None, env_goal}):
+                                        for assign_priority in [False, True]:
+                                            for use_preloaded_memory in [False, True]:
+                                                for use_mse in [False, True]:
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    agent = DuelingTDAgent(
+                                                        input_dims=env.observation_space.shape,
+                                                        action_space=env.action_space,
+                                                        gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.UCB,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        action_blocker_model_type=action_blocker_model_type,
+                                                        action_blocker_timesteps=max_time_steps,
+                                                        pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                        use_mse=use_mse)
+
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
+                                                        'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
+                                                        'use_mse': 'Yes' if use_mse else 'No'
+                                                    }
+
+                                                    result = run_gym_env(env, agent, n_games_train=500, n_games_test=50)
+
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
+
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -673,7 +632,7 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None):
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'is_double', 'algorithm_type',
                    'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
-                   'learning_type', 'num_time_steps_test', 'avg_score_test']
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -695,62 +654,55 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None):
                                         for assign_priority in [False, True]:
                                             for use_preloaded_memory in [False, True]:
                                                 for use_mse in [False, True]:
-                                                    learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                      LearningType.BOTH] if enable_action_blocker else [
-                                                        LearningType.ONLINE]
-                                                    for learning_type in learning_types:
-                                                        network_optimizer_args = {
-                                                            'learning_rate': learning_rate
-                                                        }
-                                                        network_args = {
-                                                            'fc_dims': hidden_layer_size
-                                                        }
-                                                        agent = DuelingTDAgent(
-                                                            input_dims=env.observation_space.shape,
-                                                            action_space=env.action_space,
-                                                            gamma=0.99,
-                                                            mem_size=1000,
-                                                            batch_size=batch_size,
-                                                            network_args=network_args,
-                                                            optimizer_type=optimizer_type,
-                                                            replace=1000,
-                                                            optimizer_args=network_optimizer_args,
-                                                            enable_action_blocking=enable_action_blocker,
-                                                            min_penalty=penalty,
-                                                            goal=goal,
-                                                            is_double=is_double,
-                                                            algorithm_type=algorithm_type,
-                                                            policy_type=PolicyType.THOMPSON_SAMPLING,
-                                                            policy_args=policy_args,
-                                                            assign_priority=assign_priority,
-                                                            action_blocker_model_type=action_blocker_model_type,
-                                                            action_blocker_timesteps=max_time_steps,
-                                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
-                                                            use_mse=use_mse)
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    network_args = {
+                                                        'fc_dims': hidden_layer_size
+                                                    }
+                                                    agent = DuelingTDAgent(
+                                                        input_dims=env.observation_space.shape,
+                                                        action_space=env.action_space,
+                                                        gamma=0.99,
+                                                        mem_size=1000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        enable_action_blocking=enable_action_blocker,
+                                                        min_penalty=penalty,
+                                                        goal=goal,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.THOMPSON_SAMPLING,
+                                                        policy_args=policy_args,
+                                                        assign_priority=assign_priority,
+                                                        action_blocker_model_type=action_blocker_model_type,
+                                                        action_blocker_timesteps=max_time_steps,
+                                                        pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                        use_mse=use_mse)
 
-                                                        result = run_gym_env(env, agent, n_games_train=500,
-                                                                             n_games_test=50,
-                                                                             learning_type=learning_type)
+                                                    result = run_gym_env(env, agent, n_games_train=500, n_games_test=50)
 
-                                                        new_row = {
-                                                            'batch_size': batch_size,
-                                                            'hidden_layer_size': hidden_layer_size,
-                                                            'algorithm_type': algorithm_type,
-                                                            'optimizer': optimizer_type.name.lower(),
-                                                            'learning_rate': learning_rate,
-                                                            'goal_focused': 'Yes' if goal else 'No',
-                                                            'is_double': 'Yes' if is_double else 'No',
-                                                            'assign_priority': 'Yes' if assign_priority else 'No',
-                                                            'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                                                            'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
-                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
-                                                            'use_mse': 'Yes' if use_mse else 'No',
-                                                            'learning_type': learning_type.name
-                                                        }
-                                                        for key in result:
-                                                            new_row.update({key: result[key]})
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'hidden_layer_size': hidden_layer_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'goal_focused': 'Yes' if goal else 'No',
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                                        'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                                                        'action_blocker_model_type': action_blocker_model_type if enable_action_blocker else 'N/A',
+                                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
+                                                        'use_mse': 'Yes' if use_mse else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
 
-                                                        results = results.append(new_row, ignore_index=True)
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -773,7 +725,7 @@ def run_hill_climbing(env, env_name, penalty):
 
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_hill_climbing.csv'.format(env_name))
-    result_cols = ['enable_action_blocker', 'use_preloaded_memory', 'learning_type'
+    result_cols = ['enable_action_blocker', 'use_preloaded_memory',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -782,27 +734,22 @@ def run_hill_climbing(env, env_name, penalty):
         action_blocker_model_types = ['decision_tree', 'random_forest'] if enable_action_blocker else [None]
         for action_blocker_model_type in action_blocker_model_types:
             for use_preloaded_memory in [False, True]:
-                learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                  LearningType.BOTH] if enable_action_blocker else [LearningType.ONLINE]
-                for learning_type in learning_types:
-                    agent = HillClimbingAgent(input_dims=env.observation_space.shape, action_space=env.action_space,
-                                              enable_action_blocking=enable_action_blocker,
-                                              action_blocker_model_type=action_blocker_model_type,
-                                              action_blocker_memory=pre_loaded_memory if use_preloaded_memory else None,
-                                              action_blocker_timesteps=max_time_steps,
-                                              gamma=1.0)
+                agent = HillClimbingAgent(input_dims=env.observation_space.shape, action_space=env.action_space,
+                                          enable_action_blocking=enable_action_blocker,
+                                          action_blocker_model_type=action_blocker_model_type,
+                                          action_blocker_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                          action_blocker_timesteps=max_time_steps,
+                                          gamma=1.0)
 
-                    new_row = {'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
-                               'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No',
-                               'learning_type': learning_type.name
-                               }
+                new_row = {'enable_action_blocker': 'Yes' if enable_action_blocker else 'No',
+                           }
 
-                    result = run_gym_env(env, agent, n_games_train=500, n_games_test=50, learning_type=learning_type)
+                result = run_gym_env(env, agent, n_games_train=500, n_games_test=50)
 
-                    for key in result:
-                        new_row.update({key: result[key]})
+                for key in result:
+                    new_row.update({key: result[key]})
 
-                    results = results.append(new_row, ignore_index=True)
+                results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -990,25 +937,25 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, min_penalty=0, *
         for use_model_only in [False, True]:
             for enable_action_blocking in list({False, min_penalty > 0}):
                 for use_preloaded_memory in [False, True]:
-                        agent = HeuristicWithDT(env.observation_space.shape, heuristic_func, use_model_only,
-                                                env.action_space,
-                                                enable_action_blocking, min_penalty,
-                                                pre_loaded_memory if use_preloaded_memory else None,
-                                                None, None, max_time_steps, 'decision_tree', **args)
+                    agent = HeuristicWithDT(env.observation_space.shape, heuristic_func, use_model_only,
+                                            env.action_space,
+                                            enable_action_blocking, min_penalty,
+                                            pre_loaded_memory if use_preloaded_memory else None,
+                                            None, None, max_time_steps, 'decision_tree', **args)
 
-                        result = run_gym_env(env, agent, learning_type=learning_type, n_games_train=500, n_games_test=50)
+                    result = run_gym_env(env, agent, learning_type=learning_type, n_games_train=500, n_games_test=50)
 
-                        new_row = {
-                            'learning_type': learning_type.name,
-                            'use_model_only': 'Yes' if use_model_only else 'No',
-                            'enable_action_blocking': 'Yes' if enable_action_blocking else 'No',
-                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
-                        }
+                    new_row = {
+                        'learning_type': learning_type.name,
+                        'use_model_only': 'Yes' if use_model_only else 'No',
+                        'enable_action_blocking': 'Yes' if enable_action_blocking else 'No',
+                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                    }
 
-                        for key in result:
-                            new_row.update({key: result[key]})
+                    for key in result:
+                        new_row.update({key: result[key]})
 
-                        results = results.append(new_row, ignore_index=True)
+                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, float_format='%.3f', index=False)
 
@@ -2064,21 +2011,15 @@ def run_cem_heuristics(env, env_name, heuristic_func, env_goal=None, **args):
     results.to_csv(csv_file, float_format='%.3f', index=False)
 
 
-def run_heuristics(env, env_name, heuristic_func, penalty=0, env_goal=None, **args):
+def run_heuristics(env, env_name, heuristic_func, penalty, **args):
     run_decision_tree_heuristics(env, env_name, heuristic_func, penalty, **args)
     run_random_forest_heuristics(env, env_name, heuristic_func, penalty, **args)
-    if type(env.action_space) == Discrete:
-        run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-        run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-        run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-        run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-        run_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-        run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-        if penalty > 0:
-            run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-            run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, env_goal, **args)
-        run_hill_climbing_heuristics(env, env_name, penalty, heuristic_func, **args)
-    else:
-        run_ddpg_heuristics(env, env_name, heuristic_func, env_goal, **args)
-        run_td3_heuristics(env, env_name, heuristic_func, env_goal, **args)
-        run_cem_heuristics(env, env_name, heuristic_func, env_goal, **args)
+    run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty,  **args)
+    run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, **args)
+    run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, **args)
+    run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, **args)
+    run_td_ucb_heuristics(env, env_name, heuristic_func, penalty, **args)
+    run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, penalty, **args)
+    run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, **args)
+    run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, **args)
+    run_hill_climbing_heuristics(env, env_name, penalty, heuristic_func, **args)

@@ -38,8 +38,10 @@ def run_gym_env(env, agent, n_games_train, n_games_test, learning_type=LearningT
                 if type(agent) in [HeuristicWithDDPG, HeuristicWithTD3, HeuristicWithTD, HeuristicWithDuelingTD,
                                    HeuristicWithDT, HeuristicWithHillClimbing]:
                     action = agent.get_action(env, current_learning_type, observation, True, t)
-                elif type(agent) in [DDPGAgent, DuelingTDAgent, TDAgent, TD3Agent, HillClimbingAgent]:
-                    action = agent.choose_action(env, observation, True, t)
+                elif type(agent) in [DuelingTDAgent, TDAgent, HillClimbingAgent]:
+                    action = agent.choose_action(env, current_learning_type, observation, True)
+                elif type(agent) in [DDPGAgent, TD3Agent]:
+                    action = agent.choose_action(observation, True, t)
                 else:
                     action = env.action_space.sample()
                 observation_, reward, done, _ = env.step(action)
@@ -50,8 +52,7 @@ def run_gym_env(env, agent, n_games_train, n_games_test, learning_type=LearningT
                 if type(agent) in [HeuristicWithDDPG, HeuristicWithTD3, HeuristicWithTD, HeuristicWithDuelingTD,
                                    HeuristicWithDT, DDPGAgent, DuelingTDAgent, TDAgent, TD3Agent, HillClimbingAgent,
                                    HeuristicWithHillClimbing]:
-                    agent.store_transition(observation, agent.initial_action,
-                                           reward, observation_, done)
+                    agent.store_transition(observation, agent.initial_action, reward, observation_, done)
 
                 if type(agent) in [DDPGAgent, DuelingTDAgent, TDAgent, TD3Agent, HillClimbingAgent]:
                     agent.learn()
@@ -61,8 +62,7 @@ def run_gym_env(env, agent, n_games_train, n_games_test, learning_type=LearningT
                 t += 1
 
         if type(agent) in [HeuristicWithDDPG, HeuristicWithTD3, HeuristicWithTD, HeuristicWithDuelingTD,
-                           HeuristicWithHillClimbing, HeuristicWithCEM] or (
-                type(agent) == HeuristicWithDT and current_learning_type == LearningType.OFFLINE):
+                           HeuristicWithHillClimbing, HeuristicWithCEM, HeuristicWithDT]:
             agent.optimize(env, current_learning_type)
         elif type(agent) == CEMAgent:
             agent.learn(env)
@@ -79,9 +79,13 @@ def run_gym_env(env, agent, n_games_train, n_games_test, learning_type=LearningT
         while not done and not have_we_ran_out_of_time(env, t):
             if type(agent) in [HeuristicWithDDPG, HeuristicWithTD3, HeuristicWithTD, HeuristicWithDuelingTD,
                                HeuristicWithDT, HeuristicWithHillClimbing, HeuristicWithCEM]:
-                action = agent.get_action(env, learning_type, observation, True, t)
-            elif type(agent) in [DDPGAgent, DuelingTDAgent, TDAgent, TD3Agent, HillClimbingAgent, CEMAgent]:
-                action = agent.choose_action(env, observation, True, t)
+                action = agent.get_action(env, learning_type, observation, False, t)
+            elif type(agent) in [DuelingTDAgent, TDAgent, HillClimbingAgent]:
+                action = agent.get_action(env, learning_type, observation, False)
+            elif type(agent) in [DDPGAgent, TD3Agent]:
+                action = agent.choose_action(observation, False, t)
+            elif type(agent) == CEMAgent:
+                action = agent.choose_action(observation, False)
             else:
                 action = env.action_space.sample()
             observation_, reward, done, _ = env.step(action)
@@ -141,10 +145,12 @@ def run_pettingzoo_env(env, agents, n_games_train, n_games_test, learning_type=L
                             if type(env.observation_spaces[agent_id]) == Dict:
                                 state = state['observation']
                             action = agent.get_action(env, current_learning_type, state, True, t)
-                        elif type(agent) in [DDPGAgent, DuelingTDAgent, TDAgent, TD3Agent, HillClimbingAgent]:
+                        elif type(agent) in [DuelingTDAgent, TDAgent, HillClimbingAgent]:
                             if type(env.observation_spaces[agent_id]) == Dict:
                                 state = state['observation']
-                            action = agent.choose_action(env, state, True, t)
+                            action = agent.choose_action(env, current_learning_type, state, True)
+                        elif type(agent) in [DDPGAgent, TD3Agent]:
+                            action = agent.choose_action(state, True, t)
                         else:
                             action = agent.act(state)
                         env.step(action)
@@ -154,7 +160,7 @@ def run_pettingzoo_env(env, agents, n_games_train, n_games_test, learning_type=L
                         cumulative_rewards.update({agent_id: new_cum_reward})
 
                         if past_state is not None and past_action is not None \
-                                and type(agent) in [RandomLegal, CEMAgent, HeuristicWithCEM]:
+                                and type(agent) not in [RandomLegal, CEMAgent, HeuristicWithCEM]:
                             agent.store_transition(past_state, past_action, reward, state, done)
 
                         if type(agent) in [DDPGAgent, DuelingTDAgent, TDAgent, TD3Agent, HillClimbingAgent]:
@@ -167,8 +173,7 @@ def run_pettingzoo_env(env, agents, n_games_train, n_games_test, learning_type=L
         for agent_id in agents:
             agent = agents[agent_id]
             if type(agent) in [HeuristicWithDDPG, HeuristicWithTD3, HeuristicWithTD, HeuristicWithDuelingTD,
-                               HeuristicWithCEM, HeuristicWithHillClimbing] \
-                    or (type(agent) == HeuristicWithDT and current_learning_type == LearningType.OFFLINE):
+                               HeuristicWithCEM, HeuristicWithHillClimbing, HeuristicWithDT]:
                 agent.optimize(env, current_learning_type)
             elif type(agent) == CEMAgent:
                 agent.learn(env)
@@ -196,14 +201,16 @@ def run_pettingzoo_env(env, agents, n_games_train, n_games_test, learning_type=L
                     env.step(None)
                 else:
                     if type(agent) in [HeuristicWithDDPG, HeuristicWithTD3, HeuristicWithTD, HeuristicWithDuelingTD,
-                                       HeuristicWithDT, HeuristicWithHillClimbing, HeuristicWithCEM]:
+                                       HeuristicWithDT, HeuristicWithHillClimbing]:
                         if type(env.observation_spaces[agent_id]) == Dict:
                             state = state['observation']
                         action = agent.get_action(env, learning_type, state, False)
-                    elif type(agent) in [DDPGAgent, DuelingTDAgent, TDAgent, TD3Agent, CEMAgent, HillClimbingAgent]:
+                    elif type(agent) in [DuelingTDAgent, TDAgent, HillClimbingAgent]:
                         if type(env.observation_spaces[agent_id]) == Dict:
                             state = state['observation']
-                        action = agent.choose_action(env, state, False)
+                        action = agent.choose_action(env, learning_type, state, False)
+                    elif type(agent) in [DDPGAgent, TD3Agent]:
+                        action = agent.choose_action(state, False)
                     else:
                         action = agent.act(state)
                     env.step(action)

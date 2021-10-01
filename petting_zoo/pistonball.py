@@ -9,13 +9,18 @@ from torch_rl.heuristic.heuristic_with_cem import HeuristicWithCEM
 from torch_rl.heuristic.heuristic_with_ddpg import HeuristicWithDDPG
 from torch_rl.heuristic.heuristic_with_dt import HeuristicWithDT
 from torch_rl.heuristic.heuristic_with_dueling_td import HeuristicWithDuelingTD
+from torch_rl.heuristic.heuristic_with_rf import HeuristicWithRF
 from torch_rl.heuristic.heuristic_with_td import HeuristicWithTD
 from torch_rl.heuristic.heuristic_with_td3 import HeuristicWithTD3
+from torch_rl.hill_climbing.agent import HillClimbingAgent
 from torch_rl.td.agent import TDAgent
 from torch_rl.td3.agent import TD3Agent
 from torch_rl.utils.types import NetworkOptimizer, TDAlgorithmType, PolicyType, LearningType
 
 from common.run import run_pettingzoo_env
+from common.utils import develop_memory_from_pettingzoo_env
+
+max_time_steps = 500 * 1000
 
 
 def run_td_epsilon_greedy(env, env_name):
@@ -24,6 +29,7 @@ def run_td_epsilon_greedy(env, env_name):
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'assign_priority', 'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
+                   'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -46,12 +52,166 @@ def run_td_epsilon_greedy(env, env_name):
                             for epsilon in epsilons:
                                 policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
                                 for assign_priority in [False, True]:
+                                    for use_preloaded_memory in [False, True]:
+                                        for use_mse in [False, True]:
+                                            network_optimizer_args = {
+                                                'learning_rate': learning_rate
+                                            }
+                                            agents = {}
+
+                                            for agent_id in env.possible_agents:
+                                                pre_loaded_memory = develop_memory_from_pettingzoo_env(env,
+                                                                                                       max_time_steps,
+                                                                                                       agent_id)
+
+                                                agents.update({agent_id: TDAgent(
+                                                    input_dims=env.observation_spaces[agent_id].shape,
+                                                    action_space=env.action_spaces[agent_id],
+                                                    gamma=0.99,
+                                                    mem_size=1000,
+                                                    batch_size=batch_size,
+                                                    network_args=network_args,
+                                                    optimizer_type=optimizer_type,
+                                                    replace=1000,
+                                                    optimizer_args=network_optimizer_args,
+                                                    is_double=is_double,
+                                                    algorithm_type=algorithm_type,
+                                                    policy_type=PolicyType.EPSILON_GREEDY,
+                                                    policy_args=policy_args,
+                                                    assign_priority=assign_priority,
+                                                    use_mse=use_mse,
+                                                    pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None)
+                                                })
+
+                                            result = run_pettingzoo_env(env, agents, n_games_train=500,
+                                                                        n_games_test=50)
+
+                                            new_row = {
+                                                'batch_size': batch_size,
+                                                'algorithm_type': algorithm_type,
+                                                'optimizer': optimizer_type.name.lower(),
+                                                'learning_rate': learning_rate,
+                                                'is_double': 'Yes' if is_double else 'No',
+                                                'enable_decay': 'Yes' if enable_decay else 'No',
+                                                'epsilon': epsilon,
+                                                'assign_priority': 'Yes' if assign_priority else 'No',
+                                                'use_mse': 'Yes' if use_mse else 'No',
+                                                'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                            }
+                                            for key in result:
+                                                new_row.update({key: result[key]})
+
+                                            results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, index=False, float_format='%.3f')
+
+
+def run_td_softmax(env, env_name):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_td_softmax.csv'.format(env_name))
+
+    result_cols = ['batch_size', 'optimizer', 'learning_rate',
+                   'assign_priority', 'is_double', 'algorithm_type', 'tau', 'use_preloaded_memory', 'use_mse',
+                   'num_time_steps_test', 'avg_score_test']
+    results = pd.DataFrame(columns=result_cols)
+
+    policy_args = {}
+
+    network_args = {
+        'fc_dim': 512,
+        'cnn_dims': [(32, 8, 4), (64, 4, 2), (64, 3, 1)]
+    }
+
+    for is_double in [False, True]:
+        for algorithm_type in TDAlgorithmType.all():
+            for batch_size in [32, 64, 128]:
+                for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
+                    for learning_rate in [0.001, 0.0001]:
+                        for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
+                            policy_args.update({'tau': tau})
+                            for assign_priority in [False, True]:
+                                for use_preloaded_memory in [False, True]:
+                                    for use_mse in [False, True]:
+                                        network_optimizer_args = {
+                                            'learning_rate': learning_rate
+                                        }
+                                        agents = {}
+
+                                        for agent_id in env.possible_agents:
+                                            pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps,
+                                                                                                   agent_id)
+
+                                            agents.update({agent_id: TDAgent(
+                                                input_dims=env.observation_spaces[agent_id].shape,
+                                                action_space=env.action_spaces[agent_id],
+                                                gamma=0.99,
+                                                mem_size=1000,
+                                                batch_size=batch_size,
+                                                network_args=network_args,
+                                                optimizer_type=optimizer_type,
+                                                replace=1000,
+                                                optimizer_args=network_optimizer_args,
+                                                is_double=is_double,
+                                                algorithm_type=algorithm_type,
+                                                policy_type=PolicyType.SOFTMAX,
+                                                policy_args=policy_args,
+                                                assign_priority=assign_priority,
+                                                use_mse=use_mse,
+                                                pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None)})
+
+                                        result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
+
+                                        new_row = {
+                                            'batch_size': batch_size,
+                                            'algorithm_type': algorithm_type,
+                                            'optimizer': optimizer_type.name.lower(),
+                                            'learning_rate': learning_rate,
+                                            'is_double': 'Yes' if is_double else 'No',
+                                            'tau': tau,
+                                            'use_mse': 'Yes' if use_mse else 'No',
+                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                        }
+                                        for key in result:
+                                            new_row.update({key: result[key]})
+
+                                        results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, index=False, float_format='%.3f')
+
+
+def run_td_ucb(env, env_name):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_td_ucb.csv'.format(env_name))
+
+    result_cols = ['batch_size', 'optimizer', 'learning_rate',
+                   'assign_priority', 'is_double', 'algorithm_type', 'use_preloaded_memory', 'use_mse',
+                   'num_time_steps_test', 'avg_score_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    policy_args = {'confidence_factor': 2}
+
+    network_args = {
+        'fc_dim': 512,
+        'cnn_dims': [(32, 8, 4), (64, 4, 2), (64, 3, 1)]
+    }
+
+    for is_double in [False, True]:
+        for algorithm_type in TDAlgorithmType.all():
+            for batch_size in [32, 64, 128]:
+                for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
+                    for learning_rate in [0.001, 0.0001]:
+                        for assign_priority in [False, True]:
+                            for use_preloaded_memory in [False, True]:
+                                for use_mse in [False, True]:
                                     network_optimizer_args = {
                                         'learning_rate': learning_rate
                                     }
                                     agents = {}
 
                                     for agent_id in env.possible_agents:
+                                        pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps,
+                                                                                               agent_id)
+
                                         agents.update({agent_id: TDAgent(
                                             input_dims=env.observation_spaces[agent_id].shape,
                                             action_space=env.action_spaces[agent_id],
@@ -64,13 +224,13 @@ def run_td_epsilon_greedy(env, env_name):
                                             optimizer_args=network_optimizer_args,
                                             is_double=is_double,
                                             algorithm_type=algorithm_type,
-                                            policy_type=PolicyType.EPSILON_GREEDY,
+                                            policy_type=PolicyType.UCB,
                                             policy_args=policy_args,
-                                            assign_priority=assign_priority)
-                                        })
+                                            assign_priority=assign_priority,
+                                            use_mse=use_mse,
+                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None)})
 
-                                    result = run_pettingzoo_env(env, agents, n_games_train=500,
-                                                                n_games_test=50)
+                                    result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
                                     new_row = {
                                         'batch_size': batch_size,
@@ -78,140 +238,14 @@ def run_td_epsilon_greedy(env, env_name):
                                         'optimizer': optimizer_type.name.lower(),
                                         'learning_rate': learning_rate,
                                         'is_double': 'Yes' if is_double else 'No',
-                                        'enable_decay': 'Yes' if enable_decay else 'No',
-                                        'epsilon': epsilon,
-                                        'assign_priority': 'Yes' if assign_priority else 'No'
+                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                        'use_mse': 'Yes' if use_mse else 'No',
+                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
                                     }
                                     for key in result:
                                         new_row.update({key: result[key]})
 
                                     results = results.append(new_row, ignore_index=True)
-
-    results.to_csv(csv_file, index=False, float_format='%.3f')
-
-
-def run_td_softmax(env, env_name):
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_td_softmax.csv'.format(env_name))
-
-    result_cols = ['batch_size', 'optimizer', 'learning_rate',
-                   'assign_priority', 'is_double', 'algorithm_type', 'tau',
-                   'num_time_steps_test', 'avg_score_test']
-    results = pd.DataFrame(columns=result_cols)
-
-    policy_args = {}
-
-    network_args = {
-        'fc_dim': 512,
-        'cnn_dims': [(32, 8, 4), (64, 4, 2), (64, 3, 1)]
-    }
-
-    for is_double in [False, True]:
-        for algorithm_type in TDAlgorithmType.all():
-            for batch_size in [32, 64, 128]:
-                for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                    for learning_rate in [0.001, 0.0001]:
-                        for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
-                            policy_args.update({'tau': tau})
-                            for assign_priority in [False, True]:
-                                network_optimizer_args = {
-                                    'learning_rate': learning_rate
-                                }
-                                agents = {}
-
-                                for agent_id in env.possible_agents:
-                                    agents.update({agent_id: TDAgent(
-                                        input_dims=env.observation_spaces[agent_id].shape,
-                                        action_space=env.action_spaces[agent_id],
-                                        gamma=0.99,
-                                        mem_size=1000,
-                                        batch_size=batch_size,
-                                        network_args=network_args,
-                                        optimizer_type=optimizer_type,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        is_double=is_double,
-                                        algorithm_type=algorithm_type,
-                                        policy_type=PolicyType.SOFTMAX,
-                                        policy_args=policy_args,
-                                        assign_priority=assign_priority)})
-
-                                result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
-
-                                new_row = {
-                                    'batch_size': batch_size,
-                                    'algorithm_type': algorithm_type,
-                                    'optimizer': optimizer_type.name.lower(),
-                                    'learning_rate': learning_rate,
-                                    'is_double': 'Yes' if is_double else 'No',
-                                    'tau': tau
-                                }
-                                for key in result:
-                                    new_row.update({key: result[key]})
-
-                                results = results.append(new_row, ignore_index=True)
-
-    results.to_csv(csv_file, index=False, float_format='%.3f')
-
-
-def run_td_ucb(env, env_name):
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_td_ucb.csv'.format(env_name))
-
-    result_cols = ['batch_size', 'optimizer', 'learning_rate',
-                   'assign_priority', 'is_double', 'algorithm_type',
-                   'num_time_steps_test', 'avg_score_test']
-
-    results = pd.DataFrame(columns=result_cols)
-
-    policy_args = {'confidence_factor': 2}
-
-    network_args = {
-        'fc_dim': 512,
-        'cnn_dims': [(32, 8, 4), (64, 4, 2), (64, 3, 1)]
-    }
-
-    for is_double in [False, True]:
-        for algorithm_type in TDAlgorithmType.all():
-            for batch_size in [32, 64, 128]:
-                for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
-                    for learning_rate in [0.001, 0.0001]:
-                        for assign_priority in [False, True]:
-                            network_optimizer_args = {
-                                'learning_rate': learning_rate
-                            }
-                            agents = {}
-
-                            for agent_id in env.possible_agents:
-                                agents.update({agent_id: TDAgent(
-                                    input_dims=env.observation_spaces[agent_id].shape,
-                                    action_space=env.action_spaces[agent_id],
-                                    gamma=0.99,
-                                    mem_size=1000,
-                                    batch_size=batch_size,
-                                    network_args=network_args,
-                                    optimizer_type=optimizer_type,
-                                    replace=1000,
-                                    optimizer_args=network_optimizer_args,
-                                    is_double=is_double,
-                                    algorithm_type=algorithm_type,
-                                    policy_type=PolicyType.UCB,
-                                    policy_args=policy_args,
-                                    assign_priority=assign_priority)})
-
-                            result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
-
-                            new_row = {
-                                'batch_size': batch_size,
-                                'algorithm_type': algorithm_type,
-                                'optimizer': optimizer_type.name.lower(),
-                                'learning_rate': learning_rate,
-                                'is_double': 'Yes' if is_double else 'No',
-                                'assign_priority': 'Yes' if assign_priority else 'No',
-                            }
-                            for key in result:
-                                new_row.update({key: result[key]})
-
-                            results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -222,7 +256,7 @@ def run_dueling_td_epsilon_greedy(env, env_name):
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
                    'is_double', 'algorithm_type', 'enable_decay',
-                   'epsilon_start', 'num_time_steps_test', 'avg_score_test']
+                   'epsilon_start', 'use_preloaded_memory', 'use_mse', 'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -243,44 +277,54 @@ def run_dueling_td_epsilon_greedy(env, env_name):
                             for epsilon in epsilons:
                                 policy_args.update({'eps_start': epsilon, 'enable_decay': enable_decay})
                                 for assign_priority in [False, True]:
-                                    network_optimizer_args = {
-                                        'learning_rate': learning_rate
-                                    }
-                                    agents = {}
+                                    for use_preloaded_memory in [False, True]:
+                                        for use_mse in [False, True]:
+                                            network_optimizer_args = {
+                                                'learning_rate': learning_rate
+                                            }
+                                            agents = {}
 
-                                    for agent_id in env.possible_agents:
-                                        agents.update({agent_id: DuelingTDAgent(
-                                            input_dims=env.observation_spaces[agent_id].shape,
-                                            action_space=env.action_spaces[agent_id],
-                                            gamma=0.99,
-                                            mem_size=1000,
-                                            batch_size=batch_size,
-                                            network_args=network_args,
-                                            optimizer_type=optimizer_type,
-                                            replace=1000,
-                                            optimizer_args=network_optimizer_args,
-                                            is_double=is_double,
-                                            algorithm_type=algorithm_type,
-                                            policy_type=PolicyType.EPSILON_GREEDY,
-                                            policy_args=policy_args,
-                                            assign_priority=assign_priority)})
+                                            for agent_id in env.possible_agents:
+                                                pre_loaded_memory = develop_memory_from_pettingzoo_env(env,
+                                                                                                       max_time_steps,
+                                                                                                       agent_id)
 
-                                    result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
+                                                agents.update({agent_id: DuelingTDAgent(
+                                                    input_dims=env.observation_spaces[agent_id].shape,
+                                                    action_space=env.action_spaces[agent_id],
+                                                    gamma=0.99,
+                                                    mem_size=1000,
+                                                    batch_size=batch_size,
+                                                    network_args=network_args,
+                                                    optimizer_type=optimizer_type,
+                                                    replace=1000,
+                                                    optimizer_args=network_optimizer_args,
+                                                    is_double=is_double,
+                                                    algorithm_type=algorithm_type,
+                                                    policy_type=PolicyType.EPSILON_GREEDY,
+                                                    policy_args=policy_args,
+                                                    assign_priority=assign_priority,
+                                                    use_mse=use_mse,
+                                                    pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None)})
 
-                                    new_row = {
-                                        'batch_size': batch_size,
-                                        'algorithm_type': algorithm_type,
-                                        'optimizer': optimizer_type.name.lower(),
-                                        'learning_rate': learning_rate,
-                                        'is_double': 'Yes' if is_double else 'No',
-                                        'enable_decay': 'Yes' if enable_decay else 'No',
-                                        'epsilon': epsilon,
-                                        'assign_priority': 'Yes' if assign_priority else 'No'
-                                    }
-                                    for key in result:
-                                        new_row.update({key: result[key]})
+                                            result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
-                                    results = results.append(new_row, ignore_index=True)
+                                            new_row = {
+                                                'batch_size': batch_size,
+                                                'algorithm_type': algorithm_type,
+                                                'optimizer': optimizer_type.name.lower(),
+                                                'learning_rate': learning_rate,
+                                                'is_double': 'Yes' if is_double else 'No',
+                                                'enable_decay': 'Yes' if enable_decay else 'No',
+                                                'epsilon': epsilon,
+                                                'assign_priority': 'Yes' if assign_priority else 'No',
+                                                'use_mse': 'Yes' if use_mse else 'No',
+                                                'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                            }
+                                            for key in result:
+                                                new_row.update({key: result[key]})
+
+                                            results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -290,7 +334,7 @@ def run_dueling_td_softmax(env, env_name):
                             '{0}_dueling_td_softmax.csv'.format(env_name))
 
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
-                   'assign_priority', 'is_double', 'algorithm_type', 'tau',
+                   'assign_priority', 'is_double', 'algorithm_type', 'tau', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -309,43 +353,52 @@ def run_dueling_td_softmax(env, env_name):
                         for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
                             policy_args.update({'tau': tau})
                             for assign_priority in [False, True]:
-                                network_optimizer_args = {
-                                    'learning_rate': learning_rate
-                                }
-                                agents = {}
+                                for use_preloaded_memory in [False, True]:
+                                    for use_mse in [False, True]:
+                                        network_optimizer_args = {
+                                            'learning_rate': learning_rate
+                                        }
+                                        agents = {}
 
-                                for agent_id in env.possible_agents:
-                                    agents.update({agent_id: DuelingTDAgent(
-                                        input_dims=env.observation_spaces[agent_id].shape,
-                                        action_space=env.action_spaces[agent_id],
-                                        gamma=0.99,
-                                        mem_size=1000,
-                                        batch_size=batch_size,
-                                        network_args=network_args,
-                                        optimizer_type=optimizer_type,
-                                        replace=1000,
-                                        optimizer_args=network_optimizer_args,
-                                        is_double=is_double,
-                                        algorithm_type=algorithm_type,
-                                        policy_type=PolicyType.SOFTMAX,
-                                        policy_args=policy_args,
-                                        assign_priority=assign_priority)})
+                                        for agent_id in env.possible_agents:
+                                            pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps,
+                                                                                                   agent_id)
 
-                                result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
+                                            agents.update({agent_id: DuelingTDAgent(
+                                                input_dims=env.observation_spaces[agent_id].shape,
+                                                action_space=env.action_spaces[agent_id],
+                                                gamma=0.99,
+                                                mem_size=1000,
+                                                batch_size=batch_size,
+                                                network_args=network_args,
+                                                optimizer_type=optimizer_type,
+                                                replace=1000,
+                                                optimizer_args=network_optimizer_args,
+                                                is_double=is_double,
+                                                algorithm_type=algorithm_type,
+                                                policy_type=PolicyType.SOFTMAX,
+                                                policy_args=policy_args,
+                                                assign_priority=assign_priority,
+                                                use_mse=use_mse,
+                                                pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None)})
 
-                                new_row = {
-                                    'batch_size': batch_size,
-                                    'algorithm_type': algorithm_type,
-                                    'optimizer': optimizer_type.name.lower(),
-                                    'learning_rate': learning_rate,
-                                    'is_double': 'Yes' if is_double else 'No',
-                                    'tau': tau,
-                                    'assign_priority': 'Yes' if assign_priority else 'No'
-                                }
-                                for key in result:
-                                    new_row.update({key: result[key]})
+                                        result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
-                                results = results.append(new_row, ignore_index=True)
+                                        new_row = {
+                                            'batch_size': batch_size,
+                                            'algorithm_type': algorithm_type,
+                                            'optimizer': optimizer_type.name.lower(),
+                                            'learning_rate': learning_rate,
+                                            'is_double': 'Yes' if is_double else 'No',
+                                            'tau': tau,
+                                            'assign_priority': 'Yes' if assign_priority else 'No',
+                                            'use_mse': 'Yes' if use_mse else 'No',
+                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                        }
+                                        for key in result:
+                                            new_row.update({key: result[key]})
+
+                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -354,7 +407,7 @@ def run_dueling_td_ucb(env, env_name):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_dueling_td_ucb.csv'.format(env_name))
     result_cols = ['batch_size', 'optimizer', 'learning_rate',
-                   'assign_priority', 'is_double', 'algorithm_type',
+                   'assign_priority', 'is_double', 'algorithm_type', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -371,43 +424,52 @@ def run_dueling_td_ucb(env, env_name):
                 for optimizer_type in [NetworkOptimizer.ADAM, NetworkOptimizer.RMSPROP]:
                     for learning_rate in [0.001, 0.0001]:
                         for assign_priority in [False, True]:
-                            network_optimizer_args = {
-                                'learning_rate': learning_rate
-                            }
-                            agents = {}
+                            for use_preloaded_memory in [False, True]:
+                                for use_mse in [False, True]:
+                                    network_optimizer_args = {
+                                        'learning_rate': learning_rate
+                                    }
+                                    agents = {}
 
-                            for agent_id in env.possible_agents:
-                                agents.update({agent_id: DuelingTDAgent(
-                                    input_dims=env.observation_spaces[agent_id].shape,
-                                    action_space=env.action_spaces[agent_id],
-                                    gamma=0.99,
-                                    mem_size=1000,
-                                    batch_size=batch_size,
-                                    network_args=network_args,
-                                    optimizer_type=optimizer_type,
-                                    replace=1000,
-                                    optimizer_args=network_optimizer_args,
-                                    is_double=is_double,
-                                    algorithm_type=algorithm_type,
-                                    policy_type=PolicyType.UCB,
-                                    policy_args=policy_args,
-                                    assign_priority=assign_priority)})
+                                    for agent_id in env.possible_agents:
+                                        pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps,
+                                                                                               agent_id)
 
-                            new_row = {
-                                'batch_size': batch_size,
-                                'algorithm_type': algorithm_type,
-                                'optimizer': optimizer_type.name.lower(),
-                                'learning_rate': learning_rate,
-                                'is_double': 'Yes' if is_double else 'No',
-                                'assign_priority': 'Yes' if assign_priority else 'No',
-                            }
+                                        agents.update({agent_id: DuelingTDAgent(
+                                            input_dims=env.observation_spaces[agent_id].shape,
+                                            action_space=env.action_spaces[agent_id],
+                                            gamma=0.99,
+                                            mem_size=1000,
+                                            batch_size=batch_size,
+                                            network_args=network_args,
+                                            optimizer_type=optimizer_type,
+                                            replace=1000,
+                                            optimizer_args=network_optimizer_args,
+                                            is_double=is_double,
+                                            algorithm_type=algorithm_type,
+                                            policy_type=PolicyType.UCB,
+                                            policy_args=policy_args,
+                                            assign_priority=assign_priority,
+                                            use_mse=use_mse,
+                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None)})
 
-                            result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
+                                    new_row = {
+                                        'batch_size': batch_size,
+                                        'algorithm_type': algorithm_type,
+                                        'optimizer': optimizer_type.name.lower(),
+                                        'learning_rate': learning_rate,
+                                        'is_double': 'Yes' if is_double else 'No',
+                                        'assign_priority': 'Yes' if assign_priority else 'No',
+                                        'use_mse': 'Yes' if use_mse else 'No',
+                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                    }
 
-                            for key in result:
-                                new_row.update({key: result[key]})
+                                    result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
-                            results = results.append(new_row, ignore_index=True)
+                                    for key in result:
+                                        new_row.update({key: result[key]})
+
+                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -421,13 +483,12 @@ def run_all_td_methods(env, env_name):
     run_td_ucb(env, env_name)
     run_dueling_td_ucb(env, env_name)
 
-
 def run_ddpg(env, env_name):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
                             '{0}_ddpg.csv'.format(env_name))
 
     result_cols = ['batch_size', 'actor_learning_rate',
-                   'critic_learning_rate', 'tau', 'assign_priority',
+                   'critic_learning_rate', 'tau', 'assign_priority', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -441,41 +502,50 @@ def run_ddpg(env, env_name):
             for critic_learning_rate in [0.001, 0.0001]:
                 for tau in [1e-2, 1e-3]:
                     for assign_priority in [False, True]:
-                        actor_optimizer_args = {
-                            'learning_rate': actor_learning_rate
-                        }
-                        critic_optimizer_args = {
-                            'learning_rate': critic_learning_rate
-                        }
-                        agents = {}
+                        for use_preloaded_memory in [False, True]:
+                            for use_mse in [False, True]:
+                                actor_optimizer_args = {
+                                    'learning_rate': actor_learning_rate
+                                }
+                                critic_optimizer_args = {
+                                    'learning_rate': critic_learning_rate
+                                }
+                                agents = {}
 
-                        for agent_id in env.possible_agents:
-                            agents.update({agent_id: DDPGAgent(
-                                input_dims=env.observation_spaces[agent_id].shape,
-                                action_space=env.action_spaces[agent_id],
-                                tau=tau, network_args=network_args,
-                                batch_size=batch_size,
-                                actor_optimizer_type=NetworkOptimizer.ADAM,
-                                critic_optimizer_type=NetworkOptimizer.ADAM,
-                                actor_optimizer_args=actor_optimizer_args,
-                                critic_optimizer_args=critic_optimizer_args,
-                                assign_priority=assign_priority
-                            )})
+                                for agent_id in env.possible_agents:
+                                    pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps,
+                                                                                           agent_id)
 
-                        result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
+                                    agents.update({agent_id: DDPGAgent(
+                                        input_dims=env.observation_spaces[agent_id].shape,
+                                        action_space=env.action_spaces[agent_id],
+                                        tau=tau, network_args=network_args,
+                                        batch_size=batch_size,
+                                        actor_optimizer_type=NetworkOptimizer.ADAM,
+                                        critic_optimizer_type=NetworkOptimizer.ADAM,
+                                        actor_optimizer_args=actor_optimizer_args,
+                                        critic_optimizer_args=critic_optimizer_args,
+                                        assign_priority=assign_priority,
+                                        use_mse=use_mse,
+                                        pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None
+                                    )})
 
-                        new_row = {
-                            'batch_size': batch_size,
-                            'actor_learning_rate': actor_learning_rate,
-                            'critic_learning_rate': critic_learning_rate,
-                            'tau': tau,
-                            'assign_priority': 'Yes' if assign_priority else 'No'
-                        }
+                                result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
-                        for key in result:
-                            new_row.update({key: result[key]})
+                                new_row = {
+                                    'batch_size': batch_size,
+                                    'actor_learning_rate': actor_learning_rate,
+                                    'critic_learning_rate': critic_learning_rate,
+                                    'tau': tau,
+                                    'assign_priority': 'Yes' if assign_priority else 'No',
+                                    'use_mse': 'Yes' if use_mse else 'No',
+                                    'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                }
 
-                        results = results.append(new_row, ignore_index=True)
+                                for key in result:
+                                    new_row.update({key: result[key]})
+
+                                results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -485,7 +555,7 @@ def run_td3(env, env_name):
                             '{0}_td3.csv'.format(env_name))
 
     result_cols = ['batch_size', 'actor_learning_rate',
-                   'critic_learning_rate', 'tau', 'assign_priority',
+                   'critic_learning_rate', 'tau', 'assign_priority', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -504,33 +574,41 @@ def run_td3(env, env_name):
     for batch_size in [64, 100, 128]:
         for tau in [0.005, 0.01]:
             for assign_priority in [False, True]:
-                agents = {}
+                for use_preloaded_memory in [False, True]:
+                    for use_mse in [False, True]:
+                        agents = {}
 
-                for agent_id in env.possible_agents:
-                    agents.update({agent_id: TD3Agent(
-                        input_dims=env.observation_spaces[agent_id].shape,
-                        action_space=env.action_spaces[agent_id],
-                        tau=tau, network_args=network_args,
-                        batch_size=batch_size,
-                        actor_optimizer_type=NetworkOptimizer.ADAM,
-                        critic_optimizer_type=NetworkOptimizer.ADAM,
-                        actor_optimizer_args=actor_optimizer_args,
-                        critic_optimizer_args=critic_optimizer_args,
-                        assign_priority=assign_priority
-                    )})
+                        for agent_id in env.possible_agents:
+                            pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
 
-                result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
+                            agents.update({agent_id: TD3Agent(
+                                input_dims=env.observation_spaces[agent_id].shape,
+                                action_space=env.action_spaces[agent_id],
+                                tau=tau, network_args=network_args,
+                                batch_size=batch_size,
+                                actor_optimizer_type=NetworkOptimizer.ADAM,
+                                critic_optimizer_type=NetworkOptimizer.ADAM,
+                                actor_optimizer_args=actor_optimizer_args,
+                                critic_optimizer_args=critic_optimizer_args,
+                                assign_priority=assign_priority,
+                                use_mse=use_mse,
+                                pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None
+                            )})
 
-                new_row = {
-                    'batch_size': batch_size,
-                    'tau': tau,
-                    'assign_priority': 'Yes' if assign_priority else 'No'
-                }
+                        result = run_pettingzoo_env(env, agents, n_games_train=500, n_games_test=50)
 
-                for key in result:
-                    new_row.update({key: result[key]})
+                        new_row = {
+                            'batch_size': batch_size,
+                            'tau': tau,
+                            'assign_priority': 'Yes' if assign_priority else 'No',
+                            'use_mse': 'Yes' if use_mse else 'No',
+                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                        }
 
-                results = results.append(new_row, ignore_index=True)
+                        for key in result:
+                            new_row.update({key: result[key]})
+
+                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -550,14 +628,52 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, **args):
 
     results = pd.DataFrame(columns=result_cols)
 
-    for learning_type in [LearningType.OFFLINE]:
+    for learning_type in [LearningType.OFFLINE, LearningType.BOTH]:
         for use_model_only in [False, True]:
 
             agents = {}
 
             for agent_id in env.possible_agents:
-                agents.update({agent_id: HeuristicWithDT(heuristic_func, use_model_only, env.action_spaces[agent_id],
-                                                         False, 0, False, None, None, None, **args)})
+                agents.update({agent_id: HeuristicWithDT(
+                    heuristic_func=heuristic_func, use_model_only=use_model_only,
+                    action_space=env.action_spaces[agent_id], input_dims=env.observation_spaces[agent_id].shape,
+                    **args)})
+
+            result = run_pettingzoo_env(env, agents, learning_type=learning_type,
+                                        n_games_train=500, n_games_test=50)
+
+            new_row = {
+                'learning_type': learning_type.name,
+                'use_model_only': 'Yes' if use_model_only else 'No'
+            }
+
+            for key in result:
+                new_row.update({key: result[key]})
+
+            results = results.append(new_row, ignore_index=True)
+
+    results.to_csv(csv_file, float_format='%.3f', index=False)
+
+
+def run_random_forest_heuristics(env, env_name, heuristic_func, **args):
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_heuristic_rf.csv'.format(env_name))
+
+    result_cols = ['learning_type', 'use_model_only',
+                   'num_time_steps_test', 'avg_score_test']
+
+    results = pd.DataFrame(columns=result_cols)
+
+    for learning_type in [LearningType.OFFLINE, LearningType.BOTH]:
+        for use_model_only in [False, True]:
+
+            agents = {}
+
+            for agent_id in env.possible_agents:
+                agents.update({agent_id: HeuristicWithRF(
+                    heuristic_func=heuristic_func, use_model_only=use_model_only,
+                    action_space=env.action_spaces[agent_id], input_dims=env.observation_spaces[agent_id].shape,
+                    **args)})
 
             result = run_pettingzoo_env(env, agents, learning_type=learning_type,
                                         n_games_train=500, n_games_test=50)
@@ -581,8 +697,8 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate', 'is_double', 'algorithm_type', 'enable_decay',
-                   'epsilon_start', 'add_conservative_loss', 'alpha', 'num_time_steps_test',
-                   'avg_score_test']
+                   'epsilon_start', 'add_conservative_loss', 'alpha', 'use_preloaded_memory', 'use_mse',
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -605,57 +721,64 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args):
                                             epsilons = [1.0] if enable_decay \
                                                 else [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
                                             for epsilon in epsilons:
-                                                policy_args.update(
-                                                    {'eps_start': epsilon,
-                                                     'enable_decay': enable_decay})
-                                                network_optimizer_args = {
-                                                    'learning_rate': learning_rate
-                                                }
-                                                agents = {}
+                                                for use_preloaded_memory in [False, True]:
+                                                    for use_mse in [False, True]:
+                                                        policy_args.update(
+                                                            {'eps_start': epsilon,
+                                                             'enable_decay': enable_decay})
+                                                        network_optimizer_args = {
+                                                            'learning_rate': learning_rate
+                                                        }
+                                                        agents = {}
 
-                                                for agent_id in env.possible_agents:
-                                                    agents.update({agent_id: HeuristicWithTD(
-                                                        input_dims=env.observation_spaces[agent_id].shape,
-                                                        action_space=env.action_spaces[agent_id],
-                                                        gamma=0.99,
-                                                        mem_size=1000000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.EPSILON_GREEDY,
-                                                        policy_args=policy_args,
-                                                        use_model_only=use_model_only,
-                                                        learning_type=learning_type,
-                                                        heuristic_func=heuristic_func,
-                                                        add_conservative_loss=add_conservative_loss,
-                                                        alpha=alpha,
-                                                        **args)})
+                                                        for agent_id in env.possible_agents:
+                                                            pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
+                                                            agents.update({agent_id: HeuristicWithTD(
+                                                                input_dims=env.observation_spaces[agent_id].shape,
+                                                                action_space=env.action_spaces[agent_id],
+                                                                gamma=0.99,
+                                                                mem_size=1000000,
+                                                                batch_size=batch_size,
+                                                                network_args=network_args,
+                                                                optimizer_type=optimizer_type,
+                                                                replace=1000,
+                                                                optimizer_args=network_optimizer_args,
+                                                                is_double=is_double,
+                                                                algorithm_type=algorithm_type,
+                                                                policy_type=PolicyType.EPSILON_GREEDY,
+                                                                policy_args=policy_args,
+                                                                use_model_only=use_model_only,
+                                                                learning_type=learning_type,
+                                                                heuristic_func=heuristic_func,
+                                                                add_conservative_loss=add_conservative_loss,
+                                                                alpha=alpha,
+                                                                use_mse=use_mse,
+                                                                pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                                **args)})
 
-                                                result = run_pettingzoo_env(env, agents,
-                                                                            learning_type=learning_type,
-                                                                            n_games_train=500, n_games_test=50)
+                                                        result = run_pettingzoo_env(env, agents,
+                                                                                    learning_type=learning_type,
+                                                                                    n_games_train=500, n_games_test=50)
 
-                                                new_row = {
-                                                    'batch_size': batch_size,
-                                                    'algorithm_type': algorithm_type,
-                                                    'optimizer': optimizer_type.name.lower(),
-                                                    'learning_rate': learning_rate,
-                                                    'is_double': 'Yes' if is_double else 'No',
-                                                    'enable_decay': 'Yes' if enable_decay else 'No',
-                                                    'epsilon': epsilon,
-                                                    'learning_type': learning_type.name,
-                                                    'use_model_only': 'Yes' if use_model_only else 'No',
-                                                    'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                    'alpha': alpha if add_conservative_loss else 0,
-                                                }
-                                                for key in result:
-                                                    new_row.update({key: result[key]})
+                                                        new_row = {
+                                                            'batch_size': batch_size,
+                                                            'algorithm_type': algorithm_type,
+                                                            'optimizer': optimizer_type.name.lower(),
+                                                            'learning_rate': learning_rate,
+                                                            'is_double': 'Yes' if is_double else 'No',
+                                                            'enable_decay': 'Yes' if enable_decay else 'No',
+                                                            'epsilon': epsilon,
+                                                            'learning_type': learning_type.name,
+                                                            'use_model_only': 'Yes' if use_model_only else 'No',
+                                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                            'alpha': alpha if add_conservative_loss else 0,
+                                                            'use_mse': 'Yes' if use_mse else 'No',
+                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                                        }
+                                                        for key in result:
+                                                            new_row.update({key: result[key]})
 
-                                                results = results.append(new_row, ignore_index=True)
+                                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -666,7 +789,7 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate', 'is_double', 'algorithm_type', 'tau',
-                   'add_conservative_loss', 'alpha',
+                   'add_conservative_loss', 'alpha', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -686,54 +809,62 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, **args):
                                 for add_conservative_loss in [False, True]:
                                     for alpha in [0.001]:
                                         for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
-                                            policy_args.update({'tau': tau})
-                                            network_optimizer_args = {
-                                                'learning_rate': learning_rate
-                                            }
-                                            agents = {}
+                                            for use_preloaded_memory in [False, True]:
+                                                for use_mse in [False, True]:
+                                                    policy_args.update({'tau': tau})
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    agents = {}
 
-                                            for agent_id in env.possible_agents:
-                                                agents.update({agent_id: HeuristicWithTD(
-                                                    input_dims=env.observation_spaces[agent_id].shape,
-                                                    action_space=env.action_spaces[agent_id],
-                                                    gamma=0.99,
-                                                    mem_size=1000000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.SOFTMAX,
-                                                    policy_args=policy_args,
-                                                    heuristic_func=heuristic_func,
-                                                    learning_type=learning_type,
-                                                    add_conservative_loss=add_conservative_loss,
-                                                    alpha=alpha,
-                                                    use_model_only=use_model_only,
-                                                    **args)})
+                                                    for agent_id in env.possible_agents:
+                                                        pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
 
-                                            result = run_pettingzoo_env(env, agents,
-                                                                        learning_type=learning_type,
-                                                                        n_games_train=500, n_games_test=50)
+                                                        agents.update({agent_id: HeuristicWithTD(
+                                                            input_dims=env.observation_spaces[agent_id].shape,
+                                                            action_space=env.action_spaces[agent_id],
+                                                            gamma=0.99,
+                                                            mem_size=1000000,
+                                                            batch_size=batch_size,
+                                                            network_args=network_args,
+                                                            optimizer_type=optimizer_type,
+                                                            replace=1000,
+                                                            optimizer_args=network_optimizer_args,
+                                                            is_double=is_double,
+                                                            algorithm_type=algorithm_type,
+                                                            policy_type=PolicyType.SOFTMAX,
+                                                            policy_args=policy_args,
+                                                            heuristic_func=heuristic_func,
+                                                            learning_type=learning_type,
+                                                            add_conservative_loss=add_conservative_loss,
+                                                            alpha=alpha,
+                                                            use_model_only=use_model_only,
+                                                            use_mse=use_mse,
+                                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                            **args)})
 
-                                            new_row = {
-                                                'batch_size': batch_size,
-                                                'algorithm_type': algorithm_type,
-                                                'optimizer': optimizer_type.name.lower(),
-                                                'learning_rate': learning_rate,
-                                                'is_double': 'Yes' if is_double else 'No',
-                                                'tau': tau,
-                                                'use_model_only': 'Yes' if use_model_only else 'No',
-                                                'learning_type': learning_type.name,
-                                                'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                'alpha': alpha if add_conservative_loss else 0
-                                            }
-                                            for key in result:
-                                                new_row.update({key: result[key]})
+                                                    result = run_pettingzoo_env(env, agents,
+                                                                                learning_type=learning_type,
+                                                                                n_games_train=500, n_games_test=50)
 
-                                            results = results.append(new_row, ignore_index=True)
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'tau': tau,
+                                                        'use_model_only': 'Yes' if use_model_only else 'No',
+                                                        'learning_type': learning_type.name,
+                                                        'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                        'alpha': alpha if add_conservative_loss else 0,
+                                                        'use_mse': 'Yes' if use_mse else 'No',
+                                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
+
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -750,6 +881,7 @@ def run_td_ucb_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'optimizer', 'learning_rate',
                    'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
+                   'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -763,50 +895,57 @@ def run_td_ucb_heuristics(env, env_name, heuristic_func, **args):
                             for learning_rate in [0.001, 0.0001]:
                                 for add_conservative_loss in [False, True]:
                                     for alpha in [0.001]:
-                                        network_optimizer_args = {
-                                            'learning_rate': learning_rate
-                                        }
-                                        agents = {}
+                                        for use_preloaded_memory in [False, True]:
+                                            for use_mse in [False, True]:
+                                                network_optimizer_args = {
+                                                    'learning_rate': learning_rate
+                                                }
+                                                agents = {}
 
-                                        for agent_id in env.possible_agents:
-                                            agents.update({agent_id: HeuristicWithTD(
-                                                input_dims=env.observation_spaces[agent_id].shape,
-                                                action_space=env.action_spaces[agent_id],
-                                                gamma=0.99,
-                                                mem_size=1000000,
-                                                batch_size=batch_size,
-                                                network_args=network_args,
-                                                optimizer_type=optimizer_type,
-                                                replace=1000,
-                                                optimizer_args=network_optimizer_args,
-                                                is_double=is_double,
-                                                algorithm_type=algorithm_type,
-                                                policy_type=PolicyType.UCB,
-                                                policy_args=policy_args,
-                                                learning_type=learning_type,
-                                                use_model_only=use_model_only,
-                                                heuristic_func=heuristic_func,
-                                                add_conservative_loss=add_conservative_loss,
-                                                alpha=alpha, **args)})
+                                                for agent_id in env.possible_agents:
+                                                    pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
+                                                    agents.update({agent_id: HeuristicWithTD(
+                                                        input_dims=env.observation_spaces[agent_id].shape,
+                                                        action_space=env.action_spaces[agent_id],
+                                                        gamma=0.99,
+                                                        mem_size=1000000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.UCB,
+                                                        policy_args=policy_args,
+                                                        learning_type=learning_type,
+                                                        use_model_only=use_model_only,
+                                                        heuristic_func=heuristic_func,
+                                                        add_conservative_loss=add_conservative_loss,
+                                                        use_mse=use_mse,
+                                                        pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                        alpha=alpha, **args)})
 
-                                        result = run_pettingzoo_env(env, agents, learning_type=learning_type,
-                                                                    n_games_train=500, n_games_test=50)
+                                                result = run_pettingzoo_env(env, agents, learning_type=learning_type,
+                                                                            n_games_train=500, n_games_test=50)
 
-                                        new_row = {
-                                            'batch_size': batch_size,
-                                            'algorithm_type': algorithm_type,
-                                            'optimizer': optimizer_type.name.lower(),
-                                            'learning_rate': learning_rate,
-                                            'is_double': 'Yes' if is_double else 'No',
-                                            'learning_type': learning_type.name,
-                                            'use_model_only': 'Yes' if use_model_only else 'No',
-                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                            'alpha': alpha if add_conservative_loss else 0,
-                                        }
-                                        for key in result:
-                                            new_row.update({key: result[key]})
+                                                new_row = {
+                                                    'batch_size': batch_size,
+                                                    'algorithm_type': algorithm_type,
+                                                    'optimizer': optimizer_type.name.lower(),
+                                                    'learning_rate': learning_rate,
+                                                    'is_double': 'Yes' if is_double else 'No',
+                                                    'learning_type': learning_type.name,
+                                                    'use_model_only': 'Yes' if use_model_only else 'No',
+                                                    'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                    'alpha': alpha if add_conservative_loss else 0,
+                                                    'use_mse': 'Yes' if use_mse else 'No',
+                                                    'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                                }
+                                                for key in result:
+                                                    new_row.update({key: result[key]})
 
-                                        results = results.append(new_row, ignore_index=True)
+                                                results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -817,7 +956,8 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **ar
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'optimizer', 'learning_rate',
                    'is_double', 'algorithm_type', 'enable_decay', 'epsilon_start',
-                   'add_conservative_loss', 'alpha', 'num_time_steps_test', 'avg_score_test']
+                   'add_conservative_loss', 'alpha', 'use_preloaded_memory', 'use_mse',
+                   'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -840,56 +980,64 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **ar
                                             epsilons = [1.0] if enable_decay \
                                                 else [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
                                             for epsilon in epsilons:
-                                                policy_args.update(
-                                                    {'eps_start': epsilon,
-                                                     'enable_decay': enable_decay})
-                                                network_optimizer_args = {
-                                                    'learning_rate': learning_rate
-                                                }
-                                                agents = {}
+                                                for use_preloaded_memory in [False, True]:
+                                                    for use_mse in [False, True]:
+                                                        policy_args.update(
+                                                            {'eps_start': epsilon,
+                                                             'enable_decay': enable_decay})
+                                                        network_optimizer_args = {
+                                                            'learning_rate': learning_rate
+                                                        }
+                                                        agents = {}
 
-                                                for agent_id in env.possible_agents:
-                                                    agents.update({agent_id: HeuristicWithDuelingTD(
-                                                        input_dims=env.observation_spaces[agent_id].shape,
-                                                        action_space=env.action_spaces[agent_id],
-                                                        gamma=0.99,
-                                                        mem_size=1000000,
-                                                        batch_size=batch_size,
-                                                        network_args=network_args,
-                                                        optimizer_type=optimizer_type,
-                                                        replace=1000,
-                                                        optimizer_args=network_optimizer_args,
-                                                        is_double=is_double,
-                                                        algorithm_type=algorithm_type,
-                                                        policy_type=PolicyType.EPSILON_GREEDY,
-                                                        policy_args=policy_args,
-                                                        use_model_only=use_model_only,
-                                                        learning_type=learning_type,
-                                                        heuristic_func=heuristic_func,
-                                                        add_conservative_loss=add_conservative_loss,
-                                                        alpha=alpha, **args)})
+                                                        for agent_id in env.possible_agents:
+                                                            pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
+                                                            agents.update({agent_id: HeuristicWithDuelingTD(
+                                                                input_dims=env.observation_spaces[agent_id].shape,
+                                                                action_space=env.action_spaces[agent_id],
+                                                                gamma=0.99,
+                                                                mem_size=1000000,
+                                                                batch_size=batch_size,
+                                                                network_args=network_args,
+                                                                optimizer_type=optimizer_type,
+                                                                replace=1000,
+                                                                optimizer_args=network_optimizer_args,
+                                                                is_double=is_double,
+                                                                algorithm_type=algorithm_type,
+                                                                policy_type=PolicyType.EPSILON_GREEDY,
+                                                                policy_args=policy_args,
+                                                                use_model_only=use_model_only,
+                                                                learning_type=learning_type,
+                                                                heuristic_func=heuristic_func,
+                                                                add_conservative_loss=add_conservative_loss,
+                                                                alpha=alpha,
+                                                                use_mse=use_mse,
+                                                                pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                                **args)})
 
-                                                result = run_pettingzoo_env(env, agents,
-                                                                            learning_type=learning_type,
-                                                                            n_games_train=500, n_games_test=50)
+                                                        result = run_pettingzoo_env(env, agents,
+                                                                                    learning_type=learning_type,
+                                                                                    n_games_train=500, n_games_test=50)
 
-                                                new_row = {
-                                                    'batch_size': batch_size,
-                                                    'algorithm_type': algorithm_type,
-                                                    'optimizer': optimizer_type.name.lower(),
-                                                    'learning_rate': learning_rate,
-                                                    'is_double': 'Yes' if is_double else 'No',
-                                                    'enable_decay': 'Yes' if enable_decay else 'No',
-                                                    'epsilon': epsilon,
-                                                    'learning_type': learning_type.name,
-                                                    'use_model_only': 'Yes' if use_model_only else 'No',
-                                                    'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                    'alpha': alpha if add_conservative_loss else 0,
-                                                }
-                                                for key in result:
-                                                    new_row.update({key: result[key]})
+                                                        new_row = {
+                                                            'batch_size': batch_size,
+                                                            'algorithm_type': algorithm_type,
+                                                            'optimizer': optimizer_type.name.lower(),
+                                                            'learning_rate': learning_rate,
+                                                            'is_double': 'Yes' if is_double else 'No',
+                                                            'enable_decay': 'Yes' if enable_decay else 'No',
+                                                            'epsilon': epsilon,
+                                                            'learning_type': learning_type.name,
+                                                            'use_model_only': 'Yes' if use_model_only else 'No',
+                                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                            'alpha': alpha if add_conservative_loss else 0,
+                                                            'use_mse': 'Yes' if use_mse else 'No',
+                                                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                                        }
+                                                        for key in result:
+                                                            new_row.update({key: result[key]})
 
-                                                results = results.append(new_row, ignore_index=True)
+                                                        results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -900,7 +1048,7 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate', 'is_double', 'algorithm_type', 'tau',
-                   'add_conservative_loss', 'alpha',
+                   'add_conservative_loss', 'alpha', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -921,53 +1069,61 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, **args):
                                 for add_conservative_loss in [False, True]:
                                     for alpha in [0.001]:
                                         for tau in [0.0001, 0.001, 0.1, 1.0, 10.0]:
-                                            policy_args.update({'tau': tau})
-                                            network_optimizer_args = {
-                                                'learning_rate': learning_rate
-                                            }
-                                            agents = {}
+                                            for use_preloaded_memory in [False, True]:
+                                                for use_mse in [False, True]:
+                                                    policy_args.update({'tau': tau})
+                                                    network_optimizer_args = {
+                                                        'learning_rate': learning_rate
+                                                    }
+                                                    agents = {}
 
-                                            for agent_id in env.possible_agents:
-                                                agents.update({agent_id: HeuristicWithDuelingTD(
-                                                    input_dims=env.observation_spaces[agent_id].shape,
-                                                    action_space=env.action_spaces[agent_id],
-                                                    gamma=0.99,
-                                                    mem_size=1000000,
-                                                    batch_size=batch_size,
-                                                    network_args=network_args,
-                                                    optimizer_type=optimizer_type,
-                                                    replace=1000,
-                                                    optimizer_args=network_optimizer_args,
-                                                    is_double=is_double,
-                                                    algorithm_type=algorithm_type,
-                                                    policy_type=PolicyType.SOFTMAX,
-                                                    policy_args=policy_args,
-                                                    heuristic_func=heuristic_func,
-                                                    learning_type=learning_type,
-                                                    add_conservative_loss=add_conservative_loss,
-                                                    alpha=alpha,
-                                                    use_model_only=use_model_only, **args)})
+                                                    for agent_id in env.possible_agents:
+                                                        pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
 
-                                            result = run_pettingzoo_env(env, agents,
-                                                                        learning_type=learning_type,
-                                                                        n_games_train=500, n_games_test=50)
+                                                        agents.update({agent_id: HeuristicWithDuelingTD(
+                                                            input_dims=env.observation_spaces[agent_id].shape,
+                                                            action_space=env.action_spaces[agent_id],
+                                                            gamma=0.99,
+                                                            mem_size=1000000,
+                                                            batch_size=batch_size,
+                                                            network_args=network_args,
+                                                            optimizer_type=optimizer_type,
+                                                            replace=1000,
+                                                            optimizer_args=network_optimizer_args,
+                                                            is_double=is_double,
+                                                            algorithm_type=algorithm_type,
+                                                            policy_type=PolicyType.SOFTMAX,
+                                                            policy_args=policy_args,
+                                                            heuristic_func=heuristic_func,
+                                                            learning_type=learning_type,
+                                                            add_conservative_loss=add_conservative_loss,
+                                                            alpha=alpha,
+                                                            use_mse=use_mse,
+                                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                            use_model_only=use_model_only, **args)})
 
-                                            new_row = {
-                                                'batch_size': batch_size,
-                                                'algorithm_type': algorithm_type,
-                                                'optimizer': optimizer_type.name.lower(),
-                                                'learning_rate': learning_rate,
-                                                'is_double': 'Yes' if is_double else 'No',
-                                                'tau': tau,
-                                                'use_model_only': 'Yes' if use_model_only else 'No',
-                                                'learning_type': learning_type.name,
-                                                'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                                'alpha': alpha if add_conservative_loss else 0,
-                                            }
-                                            for key in result:
-                                                new_row.update({key: result[key]})
+                                                    result = run_pettingzoo_env(env, agents,
+                                                                                learning_type=learning_type,
+                                                                                n_games_train=500, n_games_test=50)
 
-                                            results = results.append(new_row, ignore_index=True)
+                                                    new_row = {
+                                                        'batch_size': batch_size,
+                                                        'algorithm_type': algorithm_type,
+                                                        'optimizer': optimizer_type.name.lower(),
+                                                        'learning_rate': learning_rate,
+                                                        'is_double': 'Yes' if is_double else 'No',
+                                                        'tau': tau,
+                                                        'use_model_only': 'Yes' if use_model_only else 'No',
+                                                        'learning_type': learning_type.name,
+                                                        'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                        'alpha': alpha if add_conservative_loss else 0,
+                                                        'use_mse': 'Yes' if use_mse else 'No',
+                                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                                    }
+                                                    for key in result:
+                                                        new_row.update({key: result[key]})
+
+                                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -985,7 +1141,7 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, **args):
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size',
                    'optimizer', 'learning_rate',
-                   'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha',
+                   'is_double', 'algorithm_type', 'add_conservative_loss', 'alpha', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -999,50 +1155,58 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, **args):
                             for learning_rate in [0.001, 0.0001]:
                                 for add_conservative_loss in [False, True]:
                                     for alpha in [0.001]:
-                                        network_optimizer_args = {
-                                            'learning_rate': learning_rate
-                                        }
-                                        agents = {}
+                                        for use_preloaded_memory in [False, True]:
+                                            for use_mse in [False, True]:
+                                                network_optimizer_args = {
+                                                    'learning_rate': learning_rate
+                                                }
+                                                agents = {}
 
-                                        for agent_id in env.possible_agents:
-                                            agents.update({agent_id: HeuristicWithDuelingTD(
-                                                input_dims=env.observation_spaces[agent_id].shape,
-                                                action_space=env.action_spaces[agent_id],
-                                                gamma=0.99,
-                                                mem_size=1000000,
-                                                batch_size=batch_size,
-                                                network_args=network_args,
-                                                optimizer_type=optimizer_type,
-                                                replace=1000,
-                                                optimizer_args=network_optimizer_args,
-                                                is_double=is_double,
-                                                algorithm_type=algorithm_type,
-                                                policy_type=PolicyType.UCB,
-                                                policy_args=policy_args,
-                                                learning_type=learning_type,
-                                                use_model_only=use_model_only,
-                                                heuristic_func=heuristic_func,
-                                                add_conservative_loss=add_conservative_loss,
-                                                alpha=alpha, **args)})
+                                                for agent_id in env.possible_agents:
+                                                    pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
 
-                                        result = run_pettingzoo_env(env, agents, learning_type=learning_type,
-                                                                    n_games_train=500, n_games_test=50)
+                                                    agents.update({agent_id: HeuristicWithDuelingTD(
+                                                        input_dims=env.observation_spaces[agent_id].shape,
+                                                        action_space=env.action_spaces[agent_id],
+                                                        gamma=0.99,
+                                                        mem_size=1000000,
+                                                        batch_size=batch_size,
+                                                        network_args=network_args,
+                                                        optimizer_type=optimizer_type,
+                                                        replace=1000,
+                                                        optimizer_args=network_optimizer_args,
+                                                        is_double=is_double,
+                                                        algorithm_type=algorithm_type,
+                                                        policy_type=PolicyType.UCB,
+                                                        policy_args=policy_args,
+                                                        learning_type=learning_type,
+                                                        use_model_only=use_model_only,
+                                                        heuristic_func=heuristic_func,
+                                                        add_conservative_loss=add_conservative_loss,
+                                                        use_mse=use_mse,
+                                                        pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                                        alpha=alpha, **args)})
 
-                                        new_row = {
-                                            'batch_size': batch_size,
-                                            'algorithm_type': algorithm_type,
-                                            'optimizer': optimizer_type.name.lower(),
-                                            'learning_rate': learning_rate,
-                                            'is_double': 'Yes' if is_double else 'No',
-                                            'learning_type': learning_type.name,
-                                            'use_model_only': 'Yes' if use_model_only else 'No',
-                                            'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
-                                            'alpha': alpha if add_conservative_loss else 0
-                                        }
-                                        for key in result:
-                                            new_row.update({key: result[key]})
+                                                result = run_pettingzoo_env(env, agents, learning_type=learning_type,
+                                                                            n_games_train=500, n_games_test=50)
 
-                                        results = results.append(new_row, ignore_index=True)
+                                                new_row = {
+                                                    'batch_size': batch_size,
+                                                    'algorithm_type': algorithm_type,
+                                                    'optimizer': optimizer_type.name.lower(),
+                                                    'learning_rate': learning_rate,
+                                                    'is_double': 'Yes' if is_double else 'No',
+                                                    'learning_type': learning_type.name,
+                                                    'use_model_only': 'Yes' if use_model_only else 'No',
+                                                    'add_conservative_loss': 'Yes' if add_conservative_loss else 'No',
+                                                    'alpha': alpha if add_conservative_loss else 0,
+                                                    'use_mse': 'Yes' if use_mse else 'No',
+                                                    'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                                }
+                                                for key in result:
+                                                    new_row.update({key: result[key]})
+
+                                                results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1052,7 +1216,7 @@ def run_ddpg_heuristics(env, env_name, heuristic_func, **args):
                             '{0}_heuristics_ddpg.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'actor_learning_rate',
-                   'critic_learning_rate', 'tau',
+                   'critic_learning_rate', 'tau', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -1067,45 +1231,53 @@ def run_ddpg_heuristics(env, env_name, heuristic_func, **args):
                 for actor_learning_rate in [0.001, 0.0001]:
                     for critic_learning_rate in [0.001, 0.0001]:
                         for tau in [1e-2, 1e-3]:
-                            actor_optimizer_args = {
-                                'learning_rate': actor_learning_rate
-                            }
-                            critic_optimizer_args = {
-                                'learning_rate': critic_learning_rate
-                            }
-                            agents = {}
+                            for use_preloaded_memory in [False, True]:
+                                for use_mse in [False, True]:
+                                    actor_optimizer_args = {
+                                        'learning_rate': actor_learning_rate
+                                    }
+                                    critic_optimizer_args = {
+                                        'learning_rate': critic_learning_rate
+                                    }
+                                    agents = {}
 
-                            for agent_id in env.possible_agents:
-                                agents.update({agent_id: HeuristicWithDDPG(
-                                    input_dims=env.observation_spaces[agent_id].shape,
-                                    action_space=env.action_spaces[agent_id],
-                                    tau=tau, network_args=network_args,
-                                    batch_size=batch_size,
-                                    actor_optimizer_type=NetworkOptimizer.ADAM,
-                                    critic_optimizer_type=NetworkOptimizer.ADAM,
-                                    actor_optimizer_args=actor_optimizer_args,
-                                    critic_optimizer_args=critic_optimizer_args,
-                                    learning_type=learning_type,
-                                    use_model_only=use_model_only,
-                                    heuristic_func=heuristic_func, **args
-                                )})
+                                    for agent_id in env.possible_agents:
+                                        pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
 
-                            result = run_pettingzoo_env(env, agents, learning_type=learning_type,
-                                                        n_games_train=500, n_games_test=50)
+                                        agents.update({agent_id: HeuristicWithDDPG(
+                                            input_dims=env.observation_spaces[agent_id].shape,
+                                            action_space=env.action_spaces[agent_id],
+                                            tau=tau, network_args=network_args,
+                                            batch_size=batch_size,
+                                            actor_optimizer_type=NetworkOptimizer.ADAM,
+                                            critic_optimizer_type=NetworkOptimizer.ADAM,
+                                            actor_optimizer_args=actor_optimizer_args,
+                                            critic_optimizer_args=critic_optimizer_args,
+                                            learning_type=learning_type,
+                                            use_model_only=use_model_only,
+                                            use_mse=use_mse,
+                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                            heuristic_func=heuristic_func, **args
+                                        )})
 
-                            new_row = {
-                                'learning_type': learning_type.name,
-                                'use_model_only': 'Yes' if use_model_only else 'No',
-                                'batch_size': batch_size,
-                                'actor_learning_rate': actor_learning_rate,
-                                'critic_learning_rate': critic_learning_rate,
-                                'tau': tau
-                            }
+                                    result = run_pettingzoo_env(env, agents, learning_type=learning_type,
+                                                                n_games_train=500, n_games_test=50)
 
-                            for key in result:
-                                new_row.update({key: result[key]})
+                                    new_row = {
+                                        'learning_type': learning_type.name,
+                                        'use_model_only': 'Yes' if use_model_only else 'No',
+                                        'batch_size': batch_size,
+                                        'actor_learning_rate': actor_learning_rate,
+                                        'critic_learning_rate': critic_learning_rate,
+                                        'tau': tau,
+                                        'use_mse': 'Yes' if use_mse else 'No',
+                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                    }
 
-                            results = results.append(new_row, ignore_index=True)
+                                    for key in result:
+                                        new_row.update({key: result[key]})
+
+                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1115,7 +1287,7 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
                             '{0}_heuristics_td3.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'actor_learning_rate',
-                   'critic_learning_rate', 'tau',
+                   'critic_learning_rate', 'tau', 'use_preloaded_memory', 'use_mse',
                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
@@ -1131,45 +1303,53 @@ def run_td3_heuristics(env, env_name, heuristic_func, **args):
                 for actor_learning_rate in [0.001, 0.0001]:
                     for critic_learning_rate in [0.001, 0.0001]:
                         for tau in [1e-2, 1e-3]:
-                            actor_optimizer_args = {
-                                'learning_rate': actor_learning_rate
-                            }
-                            critic_optimizer_args = {
-                                'learning_rate': critic_learning_rate
-                            }
-                            agents = {}
+                            for use_preloaded_memory in [False, True]:
+                                for use_mse in [False, True]:
+                                    actor_optimizer_args = {
+                                        'learning_rate': actor_learning_rate
+                                    }
+                                    critic_optimizer_args = {
+                                        'learning_rate': critic_learning_rate
+                                    }
+                                    agents = {}
 
-                            for agent_id in env.possible_agents:
-                                agents.update({agent_id: HeuristicWithTD3(
-                                    input_dims=env.observation_spaces[agent_id].shape,
-                                    action_space=env.action_spaces[agent_id],
-                                    tau=tau, network_args=network_args,
-                                    batch_size=batch_size,
-                                    actor_optimizer_type=NetworkOptimizer.ADAM,
-                                    critic_optimizer_type=NetworkOptimizer.ADAM,
-                                    actor_optimizer_args=actor_optimizer_args,
-                                    critic_optimizer_args=critic_optimizer_args,
-                                    learning_type=learning_type,
-                                    use_model_only=use_model_only,
-                                    heuristic_func=heuristic_func, **args
-                                )})
+                                    for agent_id in env.possible_agents:
+                                        pre_loaded_memory = develop_memory_from_pettingzoo_env(env, max_time_steps, agent_id)
 
-                            result = run_pettingzoo_env(env, agents, learning_type=learning_type,
-                                                        n_games_train=500, n_games_test=50)
+                                        agents.update({agent_id: HeuristicWithTD3(
+                                            input_dims=env.observation_spaces[agent_id].shape,
+                                            action_space=env.action_spaces[agent_id],
+                                            tau=tau, network_args=network_args,
+                                            batch_size=batch_size,
+                                            actor_optimizer_type=NetworkOptimizer.ADAM,
+                                            critic_optimizer_type=NetworkOptimizer.ADAM,
+                                            actor_optimizer_args=actor_optimizer_args,
+                                            critic_optimizer_args=critic_optimizer_args,
+                                            learning_type=learning_type,
+                                            use_model_only=use_model_only,
+                                            use_mse=use_mse,
+                                            pre_loaded_memory=pre_loaded_memory if use_preloaded_memory else None,
+                                            heuristic_func=heuristic_func, **args
+                                        )})
 
-                            new_row = {
-                                'learning_type': learning_type.name,
-                                'use_model_only': 'Yes' if use_model_only else 'No',
-                                'batch_size': batch_size,
-                                'actor_learning_rate': actor_learning_rate,
-                                'critic_learning_rate': critic_learning_rate,
-                                'tau': tau
-                            }
+                                    result = run_pettingzoo_env(env, agents, learning_type=learning_type,
+                                                                n_games_train=500, n_games_test=50)
 
-                            for key in result:
-                                new_row.update({key: result[key]})
+                                    new_row = {
+                                        'learning_type': learning_type.name,
+                                        'use_model_only': 'Yes' if use_model_only else 'No',
+                                        'batch_size': batch_size,
+                                        'actor_learning_rate': actor_learning_rate,
+                                        'critic_learning_rate': critic_learning_rate,
+                                        'tau': tau,
+                                        'use_mse': 'Yes' if use_mse else 'No',
+                                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                                    }
 
-                            results = results.append(new_row, ignore_index=True)
+                                    for key in result:
+                                        new_row.update({key: result[key]})
+
+                                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1209,6 +1389,7 @@ def run_cem_heuristics(env, env_name, heuristic_func, **args):
 
 def run_discrete_heuristics(env, env_name, heuristic_func, **args):
     run_decision_tree_heuristics(env, env_name, heuristic_func, **args)
+    run_random_forest_heuristics(env, env_name, heuristic_func, **args)
     run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args)
     run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, **args)
     run_td_softmax_heuristics(env, env_name, heuristic_func, **args)
@@ -1219,8 +1400,10 @@ def run_discrete_heuristics(env, env_name, heuristic_func, **args):
 
 def run_continuous_heuristics(env, env_name, heuristic_func, **args):
     run_decision_tree_heuristics(env, env_name, heuristic_func, **args)
+    run_random_forest_heuristics(env, env_name, heuristic_func, **args)
     run_ddpg_heuristics(env, env_name, heuristic_func, **args)
     run_td3_heuristics(env, env_name, heuristic_func, **args)
+    run_cem_heuristics(env, env_name, heuristic_func, **args)
 
 
 continuous_env = pistonball_v4.env(continuous=True)
