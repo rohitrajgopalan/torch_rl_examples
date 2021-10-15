@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from gym.spaces import Discrete
+from gym.spaces import Discrete, Tuple
 from torch_rl.heuristic.heuristic_with_dt import HeuristicWithDT
 from torch_rl.heuristic.heuristic_with_rf import HeuristicWithRF
 from torch_rl.heuristic.heuristic_with_td import HeuristicWithTD
@@ -18,15 +18,24 @@ from torch_rl.hill_climbing.agent import HillClimbingAgent
 from torch_rl.cem.agent import CEMAgent
 from torch_rl.utils.types import NetworkOptimizer, TDAlgorithmType, PolicyType, LearningType
 
-from run import run_gym_env
-from utils import develop_memory_from_gym_env, derive_hidden_layer_size
+try:
+    from run import run_gym_env
+    from utils import develop_memory_from_gym_env, derive_hidden_layer_size
+except ImportError:
+    from .run import run_gym_env
+    from .utils import develop_memory_from_gym_env, derive_hidden_layer_size
 
 max_time_steps = 500 * 1000
 
 
 def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_td_epsilon_greedy.csv'.format(env_name))
+                            '{0}_td_epsilon_greedy_torch.csv'.format(env_name))
+
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory',
@@ -58,7 +67,9 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
                                                 for assign_priority in [False, True]:
                                                     for use_preloaded_memory in [False, True]:
                                                         for use_mse in [False, True]:
-                                                            for learning_type in [LearningType.OFFLINE, LearningType.ONLINE, LearningType.BOTH]:
+                                                            for learning_type in [LearningType.OFFLINE,
+                                                                                  LearningType.ONLINE,
+                                                                                  LearningType.BOTH]:
                                                                 network_optimizer_args = {
                                                                     'learning_rate': learning_rate
                                                                 }
@@ -66,7 +77,7 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
                                                                     'fc_dims': hidden_layer_size
                                                                 }
                                                                 agent = TDAgent(
-                                                                    input_dims=env.observation_space.shape,
+                                                                    input_dims=input_shape,
                                                                     action_space=env.action_space,
                                                                     gamma=0.99,
                                                                     mem_size=1000,
@@ -119,7 +130,12 @@ def run_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
 
 def run_td_softmax(env, env_name, penalty, env_goal=None):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_td_softmax.csv'.format(env_name))
+                            '{0}_td_softmax_torch.csv'.format(env_name))
+
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory',
@@ -148,7 +164,8 @@ def run_td_softmax(env, env_name, penalty, env_goal=None):
                                                 for use_preloaded_memory in [False, True]:
                                                     for use_mse in [False, True]:
                                                         learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
-                                                                 LearningType.BOTH] if enable_action_blocker else [LearningType.ONLINE]
+                                                                          LearningType.BOTH] if enable_action_blocker else [
+                                                            LearningType.ONLINE]
                                                         for learning_type in learning_types:
                                                             network_optimizer_args = {
                                                                 'learning_rate': learning_rate
@@ -157,7 +174,7 @@ def run_td_softmax(env, env_name, penalty, env_goal=None):
                                                                 'fc_dims': hidden_layer_size
                                                             }
                                                             agent = TDAgent(
-                                                                input_dims=env.observation_space.shape,
+                                                                input_dims=input_shape,
                                                                 action_space=env.action_space,
                                                                 gamma=0.99,
                                                                 mem_size=1000,
@@ -208,7 +225,13 @@ def run_td_softmax(env, env_name, penalty, env_goal=None):
 
 
 def run_td_ucb(env, env_name, penalty, env_goal=None):
-    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results', '{0}_td_ucb.csv'.format(env_name))
+    csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
+                            '{0}_td_ucb_torch.csv'.format(env_name))
+
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'is_double', 'algorithm_type',
@@ -246,7 +269,7 @@ def run_td_ucb(env, env_name, penalty, env_goal=None):
                                                             'fc_dims': hidden_layer_size
                                                         }
                                                         agent = TDAgent(
-                                                            input_dims=env.observation_space.shape,
+                                                            input_dims=input_shape,
                                                             action_space=env.action_space,
                                                             gamma=0.99,
                                                             mem_size=1000,
@@ -269,7 +292,8 @@ def run_td_ucb(env, env_name, penalty, env_goal=None):
                                                             use_mse=use_mse
                                                         )
 
-                                                        result = run_gym_env(env, agent, n_games_train=500, n_games_test=50,
+                                                        result = run_gym_env(env, agent, n_games_train=500,
+                                                                             n_games_test=50,
                                                                              learning_type=learning_type)
 
                                                         new_row = {
@@ -299,8 +323,13 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None):
     assert penalty > 0
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_td_thompson_sampling.csv'.format(env_name))
+                            '{0}_td_thompson_sampling_torch.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'is_double', 'algorithm_type',
@@ -339,7 +368,7 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None):
                                                             'fc_dims': hidden_layer_size
                                                         }
                                                         agent = TDAgent(
-                                                            input_dims=env.observation_space.shape,
+                                                            input_dims=input_shape,
                                                             action_space=env.action_space,
                                                             gamma=0.99,
                                                             mem_size=1000,
@@ -362,7 +391,8 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None):
                                                             use_mse=use_mse)
 
                                                         result = run_gym_env(env, agent, n_games_train=500,
-                                                                             n_games_test=50, learning_type=learning_type)
+                                                                             n_games_test=50,
+                                                                             learning_type=learning_type)
 
                                                         new_row = {
                                                             'batch_size': batch_size,
@@ -390,8 +420,13 @@ def run_td_thompson_sampling(env, env_name, penalty, env_goal=None):
 def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_dueling_td_epsilon_greedy.csv'.format(env_name))
+                            '{0}_dueling_td_epsilon_greedy_torch.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'is_double', 'algorithm_type', 'enable_decay',
@@ -432,7 +467,7 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
                                                                     'fc_dims': hidden_layer_size
                                                                 }
                                                                 agent = DuelingTDAgent(
-                                                                    input_dims=env.observation_space.shape,
+                                                                    input_dims=input_shape,
                                                                     action_space=env.action_space,
                                                                     gamma=0.99,
                                                                     mem_size=1000,
@@ -486,8 +521,13 @@ def run_dueling_td_epsilon_greedy(env, env_name, penalty, env_goal=None):
 def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_dueling_td_softmax.csv'.format(env_name))
+                            '{0}_dueling_td_softmax_torch.csv'.format(env_name))
 
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'is_double', 'algorithm_type', 'tau',
@@ -525,7 +565,7 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
                                                                 'fc_dims': hidden_layer_size
                                                             }
                                                             agent = DuelingTDAgent(
-                                                                input_dims=env.observation_space.shape,
+                                                                input_dims=input_shape,
                                                                 action_space=env.action_space,
                                                                 gamma=0.99,
                                                                 mem_size=1000,
@@ -578,8 +618,13 @@ def run_dueling_td_softmax(env, env_name, penalty, env_goal=None):
 def run_dueling_td_ucb(env, env_name, penalty, env_goal=None):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_dueling_td_ucb.csv'.format(env_name))
+                            '{0}_dueling_td_ucb_torch.csv'.format(env_name))
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'is_double', 'algorithm_type',
                    'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
@@ -614,7 +659,7 @@ def run_dueling_td_ucb(env, env_name, penalty, env_goal=None):
                                                             'fc_dims': hidden_layer_size
                                                         }
                                                         agent = DuelingTDAgent(
-                                                            input_dims=env.observation_space.shape,
+                                                            input_dims=input_shape,
                                                             action_space=env.action_space,
                                                             gamma=0.99,
                                                             mem_size=1000,
@@ -668,8 +713,13 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None):
     assert penalty > 0
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_dueling_td_thompson_sampling.csv'.format(env_name))
+                            '{0}_dueling_td_thompson_sampling_torch.csv'.format(env_name))
     result_cols = ['batch_size', 'hidden_layer_size', 'optimizer', 'learning_rate', 'goal_focused',
                    'assign_priority', 'is_double', 'algorithm_type',
                    'enable_action_blocker', 'action_blocker_model_type', 'use_preloaded_memory', 'use_mse',
@@ -706,7 +756,7 @@ def run_dueling_td_thompson_sampling(env, env_name, penalty, env_goal=None):
                                                             'fc_dims': hidden_layer_size
                                                         }
                                                         agent = DuelingTDAgent(
-                                                            input_dims=env.observation_space.shape,
+                                                            input_dims=input_shape,
                                                             action_space=env.action_space,
                                                             gamma=0.99,
                                                             mem_size=1000,
@@ -771,10 +821,15 @@ def run_all_td_methods(env, env_name, penalty, env_goal=None):
 def run_hill_climbing(env, env_name, penalty):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shapes
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_hill_climbing.csv'.format(env_name))
+                            '{0}_hill_climbing_torch.csv'.format(env_name))
     result_cols = ['enable_action_blocker', 'use_preloaded_memory', 'learning_type'
-                   'num_time_steps_test', 'avg_score_test']
+                                                                    'num_time_steps_test', 'avg_score_test']
 
     results = pd.DataFrame(columns=result_cols)
 
@@ -785,7 +840,7 @@ def run_hill_climbing(env, env_name, penalty):
                 learning_types = [LearningType.OFFLINE, LearningType.ONLINE,
                                   LearningType.BOTH] if enable_action_blocker else [LearningType.ONLINE]
                 for learning_type in learning_types:
-                    agent = HillClimbingAgent(input_dims=env.observation_space.shape, action_space=env.action_space,
+                    agent = HillClimbingAgent(input_dims=input_shape, action_space=env.action_space,
                                               enable_action_blocking=enable_action_blocker,
                                               action_blocker_model_type=action_blocker_model_type,
                                               action_blocker_memory=pre_loaded_memory if use_preloaded_memory else None,
@@ -809,7 +864,7 @@ def run_hill_climbing(env, env_name, penalty):
 
 def run_ddpg(env, env_name, env_goal):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_ddpg.csv'.format(env_name))
+                            '{0}_ddpg_torch.csv'.format(env_name))
 
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
@@ -877,7 +932,7 @@ def run_ddpg(env, env_name, env_goal):
 
 def run_td3(env, env_name, env_goal):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_td3.csv'.format(env_name))
+                            '{0}_td3_torch.csv'.format(env_name))
 
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
@@ -948,7 +1003,7 @@ def run_actor_critic_continuous_methods(env, env_name, env_goal=None):
 
 def run_cem(env, env_name, env_goal=None):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_cem.csv'.format(env_name))
+                            '{0}_cem_torch.csv'.format(env_name))
 
     result_cols = ['hidden_layer_size', 'goal_focused',
                    'num_time_steps_test', 'avg_score_test']
@@ -978,8 +1033,13 @@ def run_cem(env, env_name, env_goal=None):
 def run_decision_tree_heuristics(env, env_name, heuristic_func, min_penalty=0, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_dt.csv'.format(env_name))
+                            '{0}_heuristic_dt_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'enable_action_blocking',
                    'use_preloaded_memory', 'num_time_steps_test', 'avg_score_test']
@@ -990,25 +1050,25 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, min_penalty=0, *
         for use_model_only in [False, True]:
             for enable_action_blocking in list({False, min_penalty > 0}):
                 for use_preloaded_memory in [False, True]:
-                        agent = HeuristicWithDT(env.observation_space.shape, heuristic_func, use_model_only,
-                                                env.action_space,
-                                                enable_action_blocking, min_penalty,
-                                                pre_loaded_memory if use_preloaded_memory else None,
-                                                None, None, max_time_steps, 'decision_tree', **args)
+                    agent = HeuristicWithDT(input_shape, heuristic_func, use_model_only,
+                                            env.action_space,
+                                            enable_action_blocking, min_penalty,
+                                            pre_loaded_memory if use_preloaded_memory else None,
+                                            None, None, max_time_steps, 'decision_tree', **args)
 
-                        result = run_gym_env(env, agent, learning_type=learning_type, n_games_train=500, n_games_test=50)
+                    result = run_gym_env(env, agent, learning_type=learning_type, n_games_train=500, n_games_test=50)
 
-                        new_row = {
-                            'learning_type': learning_type.name,
-                            'use_model_only': 'Yes' if use_model_only else 'No',
-                            'enable_action_blocking': 'Yes' if enable_action_blocking else 'No',
-                            'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
-                        }
+                    new_row = {
+                        'learning_type': learning_type.name,
+                        'use_model_only': 'Yes' if use_model_only else 'No',
+                        'enable_action_blocking': 'Yes' if enable_action_blocking else 'No',
+                        'use_preloaded_memory': 'Yes' if use_preloaded_memory else 'No'
+                    }
 
-                        for key in result:
-                            new_row.update({key: result[key]})
+                    for key in result:
+                        new_row.update({key: result[key]})
 
-                        results = results.append(new_row, ignore_index=True)
+                    results = results.append(new_row, ignore_index=True)
 
     results.to_csv(csv_file, float_format='%.3f', index=False)
 
@@ -1016,8 +1076,13 @@ def run_decision_tree_heuristics(env, env_name, heuristic_func, min_penalty=0, *
 def run_random_forest_heuristics(env, env_name, heuristic_func, min_penalty=0, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_rf.csv'.format(env_name))
+                            '{0}_heuristic_rf_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'enable_action_blocking',
                    'use_preloaded_memory', 'num_time_steps_test', 'avg_score_test']
@@ -1028,7 +1093,7 @@ def run_random_forest_heuristics(env, env_name, heuristic_func, min_penalty=0, *
         for use_model_only in [False, True]:
             for enable_action_blocking in list({False, min_penalty > 0}):
                 for use_preloaded_memory in [False, True]:
-                    agent = HeuristicWithRF(env.observation_space.shape, heuristic_func, use_model_only,
+                    agent = HeuristicWithRF(input_shape, heuristic_func, use_model_only,
                                             env.action_space,
                                             enable_action_blocking, min_penalty,
                                             pre_loaded_memory if use_preloaded_memory else None,
@@ -1054,8 +1119,13 @@ def run_random_forest_heuristics(env, env_name, heuristic_func, min_penalty=0, *
 def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_td_epsilon_greedy.csv'.format(env_name))
+                            '{0}_heuristic_td_epsilon_greedy_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused', 'is_double', 'algorithm_type', 'enable_decay',
@@ -1098,7 +1168,7 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
                                                                             'fc_dims': hidden_layer_size
                                                                         }
                                                                         agent = HeuristicWithTD(
-                                                                            input_dims=env.observation_space.shape,
+                                                                            input_dims=input_shape,
                                                                             action_space=env.action_space,
                                                                             gamma=0.99,
                                                                             mem_size=1000000,
@@ -1152,7 +1222,8 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
                                                                         for key in result:
                                                                             new_row.update({key: result[key]})
 
-                                                                        results = results.append(new_row, ignore_index=True)
+                                                                        results = results.append(new_row,
+                                                                                                 ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1160,8 +1231,13 @@ def run_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env
 def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_td_softmax.csv'.format(env_name))
+                            '{0}_heuristic_td_softmax_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused', 'is_double', 'algorithm_type', 'tau',
@@ -1198,7 +1274,7 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
                                                                         'fc_dims': hidden_layer_size
                                                                     }
                                                                     agent = HeuristicWithTD(
-                                                                        input_dims=env.observation_space.shape,
+                                                                        input_dims=input_shape,
                                                                         action_space=env.action_space,
                                                                         gamma=0.99,
                                                                         mem_size=1000000,
@@ -1227,7 +1303,8 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
 
                                                                     result = run_gym_env(env, agent,
                                                                                          learning_type=learning_type,
-                                                                                         n_games_train=500, n_games_test=50)
+                                                                                         n_games_train=500,
+                                                                                         n_games_test=50)
 
                                                                     new_row = {
                                                                         'batch_size': batch_size,
@@ -1258,8 +1335,13 @@ def run_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=N
 def run_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_td_ucb.csv'.format(env_name))
+                            '{0}_heuristic_td_ucb_torch.csv'.format(env_name))
 
     policy_args = {'confidence_factor': 2}
 
@@ -1296,7 +1378,7 @@ def run_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal=None,
                                                                     'fc_dims': hidden_layer_size
                                                                 }
                                                                 agent = HeuristicWithTD(
-                                                                    input_dims=env.observation_space.shape,
+                                                                    input_dims=input_shape,
                                                                     action_space=env.action_space,
                                                                     gamma=0.99,
                                                                     mem_size=1000000,
@@ -1355,8 +1437,13 @@ def run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, 
     assert penalty > 0
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_td_thompson_sampling.csv'.format(env_name))
+                            '{0}_heuristic_td_thompson_sampling_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
@@ -1392,7 +1479,7 @@ def run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, 
                                                                     'fc_dims': hidden_layer_size
                                                                 }
                                                                 agent = HeuristicWithTD(
-                                                                    input_dims=env.observation_space.shape,
+                                                                    input_dims=input_shape,
                                                                     action_space=env.action_space,
                                                                     gamma=0.99,
                                                                     mem_size=1000000,
@@ -1451,8 +1538,13 @@ def run_td_thompson_sampling_heuristics(env, env_name, heuristic_func, penalty, 
 def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_dueling_td_epsilon_greedy.csv'.format(env_name))
+                            '{0}_heuristic_dueling_td_epsilon_greedy_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
@@ -1495,7 +1587,7 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, pena
                                                                             'fc_dims': hidden_layer_size
                                                                         }
                                                                         agent = HeuristicWithDuelingTD(
-                                                                            input_dims=env.observation_space.shape,
+                                                                            input_dims=input_shape,
                                                                             action_space=env.action_space,
                                                                             gamma=0.99,
                                                                             mem_size=1000000,
@@ -1549,7 +1641,8 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, pena
                                                                         for key in result:
                                                                             new_row.update({key: result[key]})
 
-                                                                        results = results.append(new_row, ignore_index=True)
+                                                                        results = results.append(new_row,
+                                                                                                 ignore_index=True)
 
     results.to_csv(csv_file, index=False, float_format='%.3f')
 
@@ -1557,8 +1650,13 @@ def run_dueling_td_epsilon_greedy_heuristics(env, env_name, heuristic_func, pena
 def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_dueling_td_softmax.csv'.format(env_name))
+                            '{0}_heuristic_dueling_td_softmax_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused', 'is_double', 'algorithm_type', 'tau',
@@ -1595,7 +1693,7 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, en
                                                                         'fc_dims': hidden_layer_size
                                                                     }
                                                                     agent = HeuristicWithDuelingTD(
-                                                                        input_dims=env.observation_space.shape,
+                                                                        input_dims=input_shape,
                                                                         action_space=env.action_space,
                                                                         gamma=0.99,
                                                                         mem_size=1000000,
@@ -1624,7 +1722,8 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, en
 
                                                                     result = run_gym_env(env, agent,
                                                                                          learning_type=learning_type,
-                                                                                         n_games_train=500, n_games_test=50)
+                                                                                         n_games_train=500,
+                                                                                         n_games_test=50)
 
                                                                     new_row = {
                                                                         'batch_size': batch_size,
@@ -1655,8 +1754,13 @@ def run_dueling_td_softmax_heuristics(env, env_name, heuristic_func, penalty, en
 def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_goal=None, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_dueling_td_ucb.csv'.format(env_name))
+                            '{0}_heuristic_dueling_td_ucb_torch.csv'.format(env_name))
 
     policy_args = {'confidence_factor': 2}
 
@@ -1693,7 +1797,7 @@ def run_dueling_td_ucb_heuristics(env, env_name, heuristic_func, penalty, env_go
                                                                     'fc_dims': hidden_layer_size
                                                                 }
                                                                 agent = HeuristicWithDuelingTD(
-                                                                    input_dims=env.observation_space.shape,
+                                                                    input_dims=input_shape,
                                                                     action_space=env.action_space,
                                                                     gamma=0.99,
                                                                     mem_size=1000000,
@@ -1751,8 +1855,13 @@ def run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, p
     assert penalty > 0
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_dueling_td_thompson_sampling.csv'.format(env_name))
+                            '{0}_heuristic_dueling_td_thompson_sampling_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size',
                    'optimizer', 'learning_rate', 'goal_focused',
@@ -1788,7 +1897,7 @@ def run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, p
                                                                     'fc_dims': hidden_layer_size
                                                                 }
                                                                 agent = HeuristicWithDuelingTD(
-                                                                    input_dims=env.observation_space.shape,
+                                                                    input_dims=input_shape,
                                                                     action_space=env.action_space,
                                                                     gamma=0.99,
                                                                     mem_size=1000000,
@@ -1845,8 +1954,13 @@ def run_dueling_td_thompson_sampling_heuristics(env, env_name, heuristic_func, p
 def run_hill_climbing_heuristics(env, env_name, penalty, heuristic_func, **args):
     pre_loaded_memory = develop_memory_from_gym_env(env, max_time_steps)
 
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_hill_climbing.csv'.format(env_name))
+                            '{0}_heuristic_hill_climbing_torch.csv'.format(env_name))
     result_cols = ['use_model_only', 'learning_type', 'enable_action_blocker', 'action_blocker_model_type',
                    'use_preloaded_memory', 'num_time_steps_test', 'avg_score_test']
 
@@ -1858,7 +1972,7 @@ def run_hill_climbing_heuristics(env, env_name, penalty, heuristic_func, **args)
                 action_blocker_model_types = ['decision_tree', 'random_forest'] if enable_action_blocker else [None]
                 for action_blocker_model_type in action_blocker_model_types:
                     for use_preloaded_memory in [False, True]:
-                        agent = HeuristicWithHillClimbing(input_dims=env.observation_space.shape,
+                        agent = HeuristicWithHillClimbing(input_dims=input_shape,
                                                           action_space=env.action_space,
                                                           enable_action_blocking=enable_action_blocker,
                                                           action_blocker_model_type=action_blocker_model_type,
@@ -1888,7 +2002,7 @@ def run_hill_climbing_heuristics(env, env_name, penalty, heuristic_func, **args)
 
 def run_ddpg_heuristics(env, env_name, heuristic_func, env_goal, **args):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristics_ddpg.csv'.format(env_name))
+                            '{0}_heuristics_ddpg_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau', 'goal_focused', 'use_preloaded_memory', 'use_mse',
@@ -1960,7 +2074,7 @@ def run_ddpg_heuristics(env, env_name, heuristic_func, env_goal, **args):
 
 def run_td3_heuristics(env, env_name, heuristic_func, env_goal, **args):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristics_td3.csv'.format(env_name))
+                            '{0}_heuristics_td3_torch.csv'.format(env_name))
 
     result_cols = ['learning_type', 'use_model_only', 'batch_size', 'hidden_layer_size', 'actor_learning_rate',
                    'critic_learning_rate', 'tau', 'goal_focused', 'use_preloaded_memory', 'use_mse',
@@ -2032,7 +2146,7 @@ def run_td3_heuristics(env, env_name, heuristic_func, env_goal, **args):
 
 def run_cem_heuristics(env, env_name, heuristic_func, env_goal=None, **args):
     csv_file = os.path.join(os.path.realpath(os.path.dirname('__file__')), 'results',
-                            '{0}_heuristic_cem.csv'.format(env_name))
+                            '{0}_heuristic_cem_torch.csv'.format(env_name))
 
     result_cols = ['use_model_only', 'learning_type', 'hidden_layer_size', 'goal_focused',
                    'num_time_steps_test', 'avg_score_test']

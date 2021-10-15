@@ -1,5 +1,5 @@
 from torch_rl.replay.replay import ReplayBuffer
-from gym.spaces import Dict, Box, Discrete
+from gym.spaces import Dict, Box, Discrete, Tuple
 
 
 def develop_memory_from_gym_env(env, max_time_steps=1000000):
@@ -8,7 +8,12 @@ def develop_memory_from_gym_env(env, max_time_steps=1000000):
     else:
         n_action_dims = env.action_space.shape[0]
 
-    memory = ReplayBuffer(max_time_steps, env.observation_space.shape, n_action_dims=n_action_dims)
+    if type(env.observation_space) == Tuple:
+        input_shape = (len(env.observation_space),)
+    else:
+        input_shape = env.observation_space.shape
+
+    memory = ReplayBuffer(max_time_steps, input_shape, n_action_dims=n_action_dims)
 
     obs = env.reset()
     for _ in range(max_time_steps):
